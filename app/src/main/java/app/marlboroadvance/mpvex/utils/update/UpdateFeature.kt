@@ -86,7 +86,7 @@ class UpdateManager(
             return null
         }
         
-        val release = getLatestRelease("https://api.github.com/repos/marlboro-advance/mpvEx/releases/latest")
+        val release = getLatestRelease("https://api.github.com/repos/ShiroiKuma0/shiroikuma-mpvkakucho/releases/latest")
         val currentVersion = BuildConfig.VERSION_NAME.replace("-dev", "")
         val remoteVersion = release.tagName.removePrefix("v")
         val prefs = context.getSharedPreferences("mpvEx_prefs", Context.MODE_PRIVATE)
@@ -126,16 +126,30 @@ class UpdateManager(
     }
 
     private fun isNewerVersion(remote: String, current: String): Boolean {
-        val rParts = remote.split(".").map { it.toIntOrNull() ?: 0 }
-        val cParts = current.split(".").map { it.toIntOrNull() ?: 0 }
-        
-        for (i in 0 until maxOf(rParts.size, cParts.size)) {
-            val r = rParts.getOrElse(i) { 0 }
-            val c = cParts.getOrElse(i) { 0 }
+        // shiroikuma fork: our versions are "<upstream>+<build>" (e.g. "1.2.9+3"), and the release
+        // tags match. Upstream's parser split on "." alone, so the last component came out as
+        // "9+3", failed toIntOrNull() and fell back to 0 — every fork build compared equal to every
+        // other and no update was ever offered. Compare the upstream part component-wise, then the
+        // fork build counter.
+        fun parse(v: String): Pair<List<Int>, Int> {
+            val build = v.substringAfter('+', "0").toIntOrNull() ?: 0
+            val core = v
+                .substringBefore('+')
+                .split(".")
+                .map { part -> part.takeWhile(Char::isDigit).toIntOrNull() ?: 0 }
+            return core to build
+        }
+
+        val (rCore, rBuild) = parse(remote)
+        val (cCore, cBuild) = parse(current)
+
+        for (i in 0 until maxOf(rCore.size, cCore.size)) {
+            val r = rCore.getOrElse(i) { 0 }
+            val c = cCore.getOrElse(i) { 0 }
             if (r > c) return true
             if (r < c) return false
         }
-        return false
+        return rBuild > cBuild
     }
 
     fun downloadUpdate(release: Release): Flow<Float> {

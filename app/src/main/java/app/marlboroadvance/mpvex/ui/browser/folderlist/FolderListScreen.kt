@@ -886,8 +886,10 @@ private fun FolderSortDialog(
         if (isLandscape) browserPreferences.folderGridColumnsLandscape.set(it)
         else browserPreferences.folderGridColumnsPortrait.set(it)
       },
-      valueRange = if (isLandscape) 3f..5f else 2f..4f,
-      steps = if (isLandscape) 1 else 1,
+      // shiroikuma fork: same 1–8 range in both orientations. Upstream capped portrait at 4
+      // (landscape 3–5), which is an artificial limit on a wide/folding screen.
+      valueRange = 1f..8f,
+      steps = 6,
     )
   } else null
 
@@ -899,8 +901,9 @@ private fun FolderSortDialog(
         if (isLandscape) browserPreferences.videoGridColumnsLandscape.set(it)
         else browserPreferences.videoGridColumnsPortrait.set(it)
       },
-      valueRange = if (isLandscape) 3f..5f else 1f..3f,
-      steps = if (isLandscape) 1 else 1,
+      // shiroikuma fork: same 1–8 range in both orientations (upstream capped portrait at 3).
+      valueRange = 1f..8f,
+      steps = 6,
     )
   } else null
 

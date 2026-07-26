@@ -91,10 +91,6 @@ data class ControlLayoutEditorScreen(
               preferences.topRightControls,
               preferences.bottomRightControls,
             )
-          ControlRegion.PORTRAIT_BOTTOM ->
-            listOf(
-              preferences.portraitBottomControls,
-            )
         }
       }
 
@@ -103,9 +99,7 @@ data class ControlLayoutEditorScreen(
     // State for buttons used in *other* regions
     val disabledButtons by remember {
       mutableStateOf(
-        if (region == ControlRegion.PORTRAIT_BOTTOM) {
-          emptySet()
-        } else {
+        run {
           val otherPref1: Preference<String> = prefs[1]
           val otherPref2: Preference<String> = prefs[2]
           val otherPref3: Preference<String> = prefs[3]
@@ -150,7 +144,6 @@ data class ControlLayoutEditorScreen(
           ControlRegion.TOP_RIGHT -> "Edit Top Right"
           ControlRegion.BOTTOM_RIGHT -> "Edit Bottom Right"
           ControlRegion.BOTTOM_LEFT -> "Edit Bottom Left"
-          ControlRegion.PORTRAIT_BOTTOM -> "Edit Portrait Bottom"
         }
       }
 

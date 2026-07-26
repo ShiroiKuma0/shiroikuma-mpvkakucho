@@ -101,7 +101,56 @@ The in-app updater (`standard` flavor, `ENABLE_UPDATE_FEATURE=true`) points at *
 upstream's. That is deliberate: upstream builds are signed with a different key and could never
 install over ours, so offering them as "updates" would be both broken and wrong branding. The
 `publish-version` skill's tag format (`<upstream>+<N>`, no `v` prefix) is what the updater compares
-against, so the two must stay in step.
+against, so the two must stay in step. `UpdateFeature.isNewerVersion` was also **fixed** to parse
+that `+N` tail — upstream split on `.` alone, so `"1.2.9+1"` yielded `"9+1"` → `0` and every fork
+build compared equal to every other.
+
+## The black-yellow theme (a standing fork requirement)
+
+**The house look must be ON BY DEFAULT** — a fresh install is black-and-yellow with no user action.
+Pure black `#000000` with pure yellow `#FFFF00` (**not** Material's amber `#FFEB3B`).
+
+| What | Where |
+| --- | --- |
+| `AppTheme.Shiroikuma` — listed first, its own explicit `shiroikumaColorScheme()` | `ui/theme/AppTheme.kt` |
+| Defaults: `appTheme = Shiroikuma`, `darkMode = Dark`, `amoledMode = true` | `preferences/AppearancePreferences.kt` |
+| `controlColor` (player button tint) = yellow | `ui/theme/Color.kt` |
+| Player overlay content colour | `ui/player/controls/PlayerControls.kt` |
+| Window theme pinned dark, black `windowBackground` | `res/values/themes.xml` |
+
+Two rules make the scheme render correctly, and both are easy to undo by accident:
+
+- **Every `*Container` role is a flat near-black surface, never a low-alpha accent.** Upstream's
+  generic `getDarkColorScheme()` builds containers as `primaryDark.copy(alpha = …).compositeOver(…)`
+  — with yellow over black that composites to **olive**. That is why the house theme bypasses those
+  builders entirely instead of just supplying colours to them.
+- **`surfaceTint` is `Color.Transparent`**, so Material's tonal-elevation overlay never pulls a
+  surface back toward the accent.
+
+Alpha yellow *is* correct for outlines — as a stroke over black it reads as the intended dim-yellow
+divider, not a muddy fill. The theme deliberately has **no light variant**; all three getters return
+the same scheme. Other themes keep upstream's behaviour untouched.
+
+## Portrait parity (a standing fork requirement)
+
+**白い熊's phone is wide, and portrait must not be a cut-down mode.** Upstream treated portrait as a
+lesser layout; the fork removes every one of those baked-in limits. Anything that reintroduces a
+portrait-only restriction is a regression, not a feature.
+
+| Upstream limitation | What the fork does |
+| --- | --- |
+| Portrait had one hard-coded bottom strip (`portraitBottomControls`); no top-right or bottom-left region | Portrait uses the **same four regions** as landscape, from the same preferences |
+| Layout editor had a separate `PORTRAIT_BOTTOM` region | Removed; one section, "Player Controls (portrait & landscape)" |
+| Portrait had its own pause-button / seekbar / toast anchoring | Identical geometry in both orientations |
+| `CURRENT_CHAPTER` rendered nothing in portrait | Renders in both |
+| Crowded rows clipped | Every button row scrolls horizontally |
+| Playlist sheet: list mode forced, toggle hidden, half-height cap — all portrait-only | Toggle always available, saved view mode honoured, no height cap |
+| Browser grid columns capped at 4 (folders) / 3 (videos) in portrait | 1–8 in both orientations |
+
+Despite the file name — kept as upstream's so rebases stay clean —
+`ui/player/controls/PlayerControlsLandscape.kt` now drives **both** orientations.
+`PlayerControlsPortrait.kt` is deleted. The player's *orientation* itself was already a user
+preference upstream (`PlayerOrientation`), so nothing there needed unlocking.
 
 ## Repo layout (upstream mpvEx)
 

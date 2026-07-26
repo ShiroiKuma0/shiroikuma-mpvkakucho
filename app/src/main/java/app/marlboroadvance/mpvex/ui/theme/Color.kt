@@ -2,7 +2,9 @@ package app.marlboroadvance.mpvex.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val controlColor = Color(0xFFFFFFFF)
+// shiroikuma fork: the player-control tint used when "hide player buttons background" is on.
+// Upstream drew these white; the house look is pure yellow on black.
+val controlColor = Color(0xFFFFFF00)
 val primaryLight = Color(0xFF794F81)
 val onPrimaryLight = Color(0xFFFFFFFF)
 val primaryContainerLight = Color(0xFFFCD6FF)

@@ -241,22 +241,13 @@ fun PlaylistSheet(
 
   val accentColor = MaterialTheme.colorScheme.primary
 
-  // Check portrait mode
-  val isPortrait = configuration.orientation == android.content.res.Configuration.ORIENTATION_PORTRAIT
-
-  // Portrait mode => list mode
+  // shiroikuma fork: upstream forced list mode in portrait and only honoured the saved view-mode
+  // preference in landscape. The chosen view mode now applies in both orientations.
   val isListModePreference by playerPreferences.playlistViewMode.collectAsState()
-  var isListMode by remember { mutableStateOf(if (isPortrait) true else isListModePreference) }
+  var isListMode by remember { mutableStateOf(isListModePreference) }
 
-  LaunchedEffect(isPortrait) {
-    if (isPortrait && !isListMode) {
-      isListMode = true
-    }
-  }
-
-  // Update preference when view mode changes (only in landscape)
   LaunchedEffect(isListMode) {
-    if (!isPortrait && isListMode != isListModePreference) {
+    if (isListMode != isListModePreference) {
       playerPreferences.playlistViewMode.set(isListMode)
     }
   }
@@ -298,7 +289,8 @@ fun PlaylistSheet(
     onDismissRequest = onDismissRequest,
     modifier = Modifier.fillMaxWidth(),
     customMaxWidth = sheetWidth,
-    customMaxHeight = if (isPortrait) LocalConfiguration.current.screenHeightDp.dp * 0.5f else null,
+    // shiroikuma fork: no portrait-only half-height cap on the playlist sheet.
+    customMaxHeight = null,
   ) {
     Surface(
       modifier = Modifier.fillMaxWidth(),
@@ -355,17 +347,16 @@ fun PlaylistSheet(
             )
           }
 
-          // Toggle button for list/grid view (only in landscape)
-          if (!isPortrait) {
-            IconButton(
-              onClick = { isListMode = !isListMode }
-            ) {
-              Icon(
-                imageVector = if (isListMode) Icons.Default.GridView else Icons.Default.ViewList,
-                contentDescription = if (isListMode) "Switch to Grid View" else "Switch to List View",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-              )
-            }
+          // shiroikuma fork: the list/grid toggle is available in both orientations
+          // (upstream showed it in landscape only).
+          IconButton(
+            onClick = { isListMode = !isListMode }
+          ) {
+            Icon(
+              imageVector = if (isListMode) Icons.Default.GridView else Icons.Default.ViewList,
+              contentDescription = if (isListMode) "Switch to Grid View" else "Switch to List View",
+              tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
           }
         }
 

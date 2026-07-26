@@ -21,3 +21,9 @@ app/release
 # CLAUDE.md and .claude/skills/ stay COMMITTED; only the local settings override is ignored.
 .claude/settings.local.json
 .scratch/
+# Room writes its schema export under a directory named after the database CLASS
+# (MpvExDatabase). Upstream's committed copy is under the stale lower-case name
+# "…database.mpvExDatabase", so every build here produces an untracked duplicate and leaves the
+# tree dirty — which the upstream-new-version skill requires to be clean before rebasing. The
+# generated files are identical in content to upstream's. Revisit if we ever change the schema.
+/app/schemas/app.marlboroadvance.mpvex.database.MpvExDatabase/

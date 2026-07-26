@@ -7,6 +7,13 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 import app.marlboroadvance.mpvex.R
 
+// shiroikuma fork: the house palette. Pure yellow — Material's amber #FFEB3B is NOT this colour.
+// Containers are flat near-black surfaces, never a low-alpha accent: alpha yellow composited over
+// black reads as olive, which is the trap the sister forks documented.
+val SHIROIKUMA_YELLOW = Color(0xFFFFFF00)
+private val SHIROIKUMA_BLACK = Color(0xFF000000)
+private val SHIROIKUMA_NEAR_BLACK = Color(0xFF0D0D0D) // card/surface, subtly above the background
+
 /**
  * App themes inspired by Aniyomi design
  * Each theme has light and dark color schemes with unique backgrounds
@@ -24,6 +31,22 @@ enum class AppTheme(
   val backgroundDark: Color,
   val isDynamic: Boolean = false,
 ) {
+  // shiroikuma fork: the house look — pure black with pure yellow (#FFFF00, NOT Material's
+  // #FFEB3B). Listed first and set as the default in AppearancePreferences, so a fresh install
+  // starts black-and-yellow with no user action. Its colour scheme is built explicitly by
+  // shiroikumaColorScheme() below rather than by the generic builders, which composite low-alpha
+  // accent over the background — with yellow on black that lands on olive.
+  Shiroikuma(
+    titleRes = R.string.theme_shiroikuma,
+    primaryLight = SHIROIKUMA_YELLOW,
+    primaryDark = SHIROIKUMA_YELLOW,
+    secondaryLight = SHIROIKUMA_YELLOW,
+    secondaryDark = SHIROIKUMA_YELLOW,
+    tertiaryLight = SHIROIKUMA_YELLOW,
+    tertiaryDark = SHIROIKUMA_YELLOW,
+    backgroundLight = Color.Black,
+    backgroundDark = Color.Black,
+  ),
   Default(
     titleRes = R.string.theme_default,
     primaryLight = Color(0xFF794F81),
@@ -368,9 +391,63 @@ enum class AppTheme(
   );
 
   /**
+   * shiroikuma fork: the house black-yellow scheme, built explicitly.
+   *
+   * Two things keep it clean, and both are deliberate:
+   *  - every *Container role is a flat near-black surface, never a low-alpha accent (alpha yellow
+   *    composited over black gives olive);
+   *  - [ColorScheme.surfaceTint] is transparent, so Material's tonal-elevation overlay never tints
+   *    a surface back towards the primary colour.
+   *
+   * Alpha yellow IS used for outlines — as a stroke over black it reads as dim yellow, which is
+   * the intended house divider, not a muddy fill.
+   */
+  private fun shiroikumaColorScheme(): ColorScheme = darkColorScheme(
+    primary = SHIROIKUMA_YELLOW,
+    onPrimary = SHIROIKUMA_BLACK,
+    primaryContainer = SHIROIKUMA_NEAR_BLACK,
+    onPrimaryContainer = SHIROIKUMA_YELLOW,
+    secondary = SHIROIKUMA_YELLOW,
+    onSecondary = SHIROIKUMA_BLACK,
+    secondaryContainer = SHIROIKUMA_NEAR_BLACK,
+    onSecondaryContainer = SHIROIKUMA_YELLOW,
+    tertiary = SHIROIKUMA_YELLOW,
+    onTertiary = SHIROIKUMA_BLACK,
+    tertiaryContainer = SHIROIKUMA_NEAR_BLACK,
+    onTertiaryContainer = SHIROIKUMA_YELLOW,
+    error = Color(0xFFFF6B6B),
+    onError = SHIROIKUMA_BLACK,
+    errorContainer = Color(0xFF2A0A0A),
+    onErrorContainer = Color(0xFFFF6B6B),
+    background = SHIROIKUMA_BLACK,
+    onBackground = SHIROIKUMA_YELLOW,
+    surface = SHIROIKUMA_BLACK,
+    onSurface = SHIROIKUMA_YELLOW,
+    surfaceVariant = Color(0xFF141414),
+    onSurfaceVariant = SHIROIKUMA_YELLOW,
+    outline = SHIROIKUMA_YELLOW,
+    outlineVariant = Color(0x66FFFF00),
+    scrim = SHIROIKUMA_BLACK,
+    inverseSurface = SHIROIKUMA_YELLOW,
+    inverseOnSurface = SHIROIKUMA_BLACK,
+    inversePrimary = SHIROIKUMA_BLACK,
+    surfaceTint = Color.Transparent,
+    surfaceDim = SHIROIKUMA_BLACK,
+    surfaceBright = Color(0xFF1A1A1A),
+    surfaceContainerLowest = SHIROIKUMA_BLACK,
+    surfaceContainerLow = Color(0xFF080808),
+    surfaceContainer = SHIROIKUMA_NEAR_BLACK,
+    surfaceContainerHigh = Color(0xFF141414),
+    surfaceContainerHighest = Color(0xFF1A1A1A),
+  )
+
+  /**
    * Get the light color scheme for this theme
    */
   fun getLightColorScheme(): ColorScheme {
+    // shiroikuma fork: the house theme is black-yellow in every mode — there is no light variant.
+    // Other themes keep their light schemes.
+    if (this == Shiroikuma) return shiroikumaColorScheme()
     val surfaceTint = primaryLight.copy(alpha = 0.05f).compositeOver(backgroundLight)
     return lightColorScheme(
       primary = primaryLight,
@@ -412,6 +489,7 @@ enum class AppTheme(
    * Get the dark color scheme for this theme
    */
   fun getDarkColorScheme(): ColorScheme {
+    if (this == Shiroikuma) return shiroikumaColorScheme()
     val surfaceTint = primaryDark.copy(alpha = 0.05f).compositeOver(backgroundDark)
     return darkColorScheme(
       primary = primaryDark,
@@ -452,7 +530,10 @@ enum class AppTheme(
   /**
    * Get the AMOLED (pure black) color scheme for this theme
    */
-  fun getAmoledColorScheme(): ColorScheme = getDarkColorScheme().copy(
+  fun getAmoledColorScheme(): ColorScheme = if (this == Shiroikuma) {
+    // Already pure black; the generic AMOLED overrides would reintroduce alpha-accent containers.
+    shiroikumaColorScheme()
+  } else getDarkColorScheme().copy(
     background = Color.Black,
     surface = Color.Black,
     surfaceVariant = primaryDark.copy(alpha = 0.08f).compositeOver(Color(0xFF1A1A1A)),

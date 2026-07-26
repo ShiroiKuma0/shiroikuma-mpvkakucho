@@ -1,5 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.mpvex" parent="Theme.Material3.DynamicColors.DayNight.NoActionBar" />
+    <!--
+      shiroikuma fork: upstream used Theme.Material3.DynamicColors.DayNight.NoActionBar, which
+      resolves to a LIGHT window on a light-mode system — a white flash before Compose draws, and
+      a wallpaper-derived palette we don't want. The app is black-yellow in every mode, so the
+      window theme is pinned dark with a pure black background.
+    -->
+    <style name="Theme.mpvex" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="android:windowBackground">@android:color/black</item>
+    </style>
 </resources>

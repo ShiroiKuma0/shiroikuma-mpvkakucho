@@ -37,6 +37,7 @@
   <string name="pref_appearance_watched_threshold_summary">Mark video as watched when playback reaches %d%%</string>
   <string name="video_label_new">NEW</string>
   <!-- Theme names -->
+  <string name="theme_shiroikuma" translatable="false">白い熊</string>
   <string name="theme_default">Default</string>
   <string name="theme_dynamic">Dynamic</string>
   <string name="theme_cloudflare">Cloudflare</string>
@@ -254,15 +255,6 @@
   <string name="pref_about_title">About</string>
   <string name="pref_about_summary">Acknowledgments, licenses</string>
   <string name="pref_about_oss_libraries">Libraries</string>
-  <string name="pref_about_donate_title">Donate</string>
-  <string name="pref_about_donate_kofi">Ko-fi</string>
-  <string name="pref_about_donate_kofi_summary">Support the developer on Ko-fi</string>
-  <string name="pref_about_donate_kofi_url" translatable="false">https://ko-fi.com/adityanarvekar</string>
-  <string name="pref_about_donate_paypal">PayPal</string>
-  <string name="pref_about_donate_paypal_summary">Support the developer on PayPal</string>
-  <string name="pref_about_donate_paypal_url" translatable="false">https://paypal.me/aadinarvekar</string>
-  <string name="pref_about_donate_upi">UPI</string>
-  <string name="pref_about_donate_upi_id" translatable="false">aadiinarvekar@upi</string>
   <string name="player_sheets_add_ext_sub">Add external subtitles</string>
   <string name="player_sheets_add_ext_audio">Add external audio tracks</string>
   <string name="player_sheets_tracks_off">Off</string>
@@ -355,7 +347,7 @@
   <string name="timer_remaining">%s remaining</string>
   <string name="toast_sleep_timer_ended">Sleep timer ended</string>
   <string name="volume_slider_absolute_value" translatable="false">%d</string>
-  <string name="github_repo_url" translatable="false">https://github.com/marlboro-advance/mpvex</string>
+  <string name="github_repo_url" translatable="false">https://github.com/ShiroiKuma0/shiroikuma-mpvkakucho</string>
   <string name="swap_the_volume_and_brightness_slider">Swap volume and brightness slider</string>
   <string name="pref_player_display_reduce_player_animation">Reduce player animation</string>
   <string name="pref_player_display_hide_player_control_time">Hide player control time</string>
