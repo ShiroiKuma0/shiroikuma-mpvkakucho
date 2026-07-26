@@ -3,7 +3,7 @@
 Changes this fork makes on top of stock [mpvEx](https://github.com/marlboro-advance/mpvEx).
 Upstream's own release notes are not duplicated here.
 
-## 1.2.9+1 — current
+## 1.2.9+4 — 2026-07-26 (first release)
 
 Base: upstream mpvEx `1.2.9` (versionCode 129).
 

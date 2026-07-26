@@ -1,174 +1,112 @@
-![banner](fastlane/metadata/android/en-US/images/featureGraphic.png)
+<div align="center">
 
-# mpvExtended
-[![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/marlboro-advance/mpvex.svg?logo=github&label=GitHub&cacheSeconds=3600)](https://github.com/marlboro-advance/mpvex/releases/latest)
-[![GitHub all releases](https://img.shields.io/github/downloads/marlboro-advance/mpvex/total?logo=github&cacheSeconds=3600)](https://github.com/marlboro-advance/mpvex/releases/latest)
+<img src="app/src/main/res/mipmap-xxxhdpi/ic_launcher.webp" width="120" alt="白い熊 mpv拡張 icon" />
 
+# 白い熊 mpv拡張
 
-**mpvExtended is a fork of [mpv-android](https://github.com/mpv-android/mpv-android), built on the libmpv library. It aims
-to combine the powerful features of mpv with an easy to use interface and additional
-features.**
+**An mpv-powered video player for Android — black, yellow, and yours to shape.**
 
-- Simpler and Easier to Use UI
-- Material3 Expressive Design
-- Advanced Configuration and Scripting
-- Enhanced Playback Features
-- Picture-in-Picture (PiP)
-- Background Playback
-- High-Quality Rendering
-- Network Streaming
-- File Management
-- Completely free and open source and without any ads or excessive permissions
-- Media picker with tree and folder view modes
-- External Subtitle support
-- Zoom gesture
-- External Audio support
-- Search Functionality
-- SMB/FTP/WebDAV support
-- Custom Playlist management support
+A fork of [mpvEx](https://github.com/marlboro-advance/mpvEx) with **major additions**: a full
+black-yellow UI customization page, portrait laid out exactly like landscape, one-ZIP
+export/import of everything settable, headless backup automation, and restored chapter markers.
 
-**This project is still in development and is expected to have bugs. Please report any bugs you find in
-the [Issues](https://github.com/marlboro-advance/mpvEx/issues) section.**
+Installs **side-by-side** with mpvEx (app id `shiroikuma.mpvkakucho`).
 
----
+**📥 Latest release: [`1.2.9+4`](https://github.com/ShiroiKuma0/shiroikuma-mpvkakucho/releases/latest)** — [all releases & APK downloads »](https://github.com/ShiroiKuma0/shiroikuma-mpvkakucho/releases)
 
-## Installation
-
-### Stable Release
-Download the latest stable version from the [GitHub releases page](https://github.com/marlboro-advance/mpvEx/releases).
-
-[![Download Release](https://img.shields.io/badge/Download-Release-blue?style=for-the-badge)](https://github.com/marlboro-advance/mpvEx/releases)
-
-Or you can get the stable releases here
-
-[<img src="https://gitlab.com/IzzyOnDroid/repo/-/raw/master/assets/IzzyOnDroidButtonGreyBorder_nofont.png" height="50" alt="Get it at IzzyOnDroid">](https://apt.izzysoft.de/packages/app.marlboroadvance.mpvex)
-
-### Preview Builds
-For testing purposes only
-
-[![Download Preview Builds](https://img.shields.io/badge/Download-Preview%20Builds-red?style=for-the-badge)](https://marlboro-advance.github.io/mpvEx/)
-
----
-
-## Showcase
-<div class="image-row" align="center">
-  <img src="/fastlane/metadata/android/en-US/images/phoneScreenshots/player.png" width="98%" />
-</div>
-
-<div class="image-row" align="center" justify-content="space-between">
-  <img src="/fastlane/metadata/android/en-US/images/phoneScreenshots/folderscreen.png" width="23.5%"/>
-  <img src="/fastlane/metadata/android/en-US/images/phoneScreenshots/videoscreen.png" width="23.5%"/>
-  <img src="/fastlane/metadata/android/en-US/images/phoneScreenshots/about.png" width="23.5%"/>
-  <img src="/fastlane/metadata/android/en-US/images/phoneScreenshots/pip.png" width="23.5%"/>
-</div>
-
-<div class="image-row" align="center">
-  <img src="/fastlane/metadata/android/en-US/images/phoneScreenshots/framenavigation.png" width="48.5%" />
-  <img src="/fastlane/metadata/android/en-US/images/phoneScreenshots/chapters.png" width="48.5%" />
 </div>
 
 ---
+
+## 🎨 The 白い熊 mpv拡張 UI page
+
+A customization page that actually reaches the app. Pure black with pure yellow `#FFFF00` is the
+**default** — no setup, no Material You, no wallpaper palette. From one page you set every colour,
+font, size, border and spacing, and each group shows a **live preview** of exactly what it drives.
+
+Colour pickers are four **RGBA** sliders over a live swatch, with one-click choice boxes above
+prefilled with the house palette and every colour you have used before. Every size is a slider, and
+every border, roundness, divider and gap slider reaches **0** — off is always reachable.
+
+Reach it from Settings, or **long-press the settings cog** on any browser screen.
+
+---
+
+## 🔤 Your own fonts
+
+Import any `.ttf`/`.otf` into the app, then pick it for the whole UI — with weight and text scale on
+their own sliders. The font picker renders **every option in its own glyphs**, so you choose by
+looking at the typeface, not at its filename.
+
+---
+
+## 📱 Portrait is not a lesser mode
+
+Upstream treated portrait as a cut-down layout. Here it is not:
+
+- All four control regions — top-left, top-right, bottom-left, bottom-right — in **both**
+  orientations, from the same settings. Upstream gave portrait a single hard-coded strip and no
+  top-right or bottom-left region at all.
+- Identical geometry in both: pause button centred, seekbar at the bottom, control rows above it.
+- The chapter chip renders in portrait (upstream drew nothing there).
+- Every button row scrolls horizontally, so a crowded region never clips at any width.
+- Playlist sheet: list/grid toggle available in portrait, saved view mode honoured, no half-height cap.
+- Browser grid columns 1–8 in both orientations, not 4/3 in portrait against landscape's 5.
+
+---
+
+## 💾 One ZIP, everything settable
+
+Export and import the whole app as a single `.zip` of plain JSON — the UI theme, imported fonts, all
+app settings, playlists, playback history and network connections, each independently selectable.
+Import **merges**: absent categories are skipped and settings are merged key by key, so an old
+backup never destroys state it does not mention.
+
+Pick an export directory once and the page tells you when you last backed up.
+
+---
+
+## 🤖 Headless backup automation
+
+The app answers a token-gated `EXPORT_STATE` broadcast, so a sister-app task can back it up with no
+UI at all — reporting real progress counts and replying with the written path and size. The master
+switch is **off** until you turn it on, and the token never travels inside a backup.
+
+---
+
+## 📖 Chapters that work again
+
+Upstream 1.2.9 had removed chapter markers from both seekbar renderers, and its Chapters sheet
+bailed out whenever mpv reported the current chapter as `-1` — which it does before the first
+chapter starts. Chapter boundaries are drawn again, with a settable marker width (0 = off), and the
+Chapters sheet lists chapters whenever the file has any.
+
+---
+
+## Built on mpvEx
+
+A fork of [mpvEx](https://github.com/marlboro-advance/mpvEx) (app id `shiroikuma.mpvkakucho`, so it
+coexists with the official build), itself built on mpv-android and forked from mpvKt. Upstream does
+the hard part — a genuinely good Jetpack Compose front-end over mpv, with the whole FFmpeg/mpv stack
+behind it — and this fork is a personal re-skin and extension on top of that work. The code remains
+under the **Apache License 2.0**.
 
 ## Building
 
-### Prerequisites
-
-- JDK 17
-- Android SDK with build tools 34.0.0+
-- Git (for version information in builds)
-
-### APK Variants
-
-The app generates multiple APK variants for different CPU architectures:
-
-- **universal**: Works on all devices (larger size)
-- **arm64-v8a**: Modern 64-bit ARM devices (recommended for most users)
-- **armeabi-v7a**: Older 32-bit ARM devices
-- **x86**: Intel/AMD 32-bit devices
-- **x86_64**: Intel/AMD 64-bit devices
-
----
-
-## Releases
-
-### Setting Up Release Signing
-
-To enable automatic signing for release builds in GitHub Actions, you need to configure the
-following secrets in your GitHub repository:
-
-1. Navigate to your repository on GitHub
-2. Go to **Settings** → **Secrets and variables** → **Actions**
-3. Add the following repository secrets:
-
-| Secret Name              | Description                                          |
-|--------------------------|------------------------------------------------------|
-| `SIGNING_KEYSTORE`       | Base64-encoded keystore file (`.jks` or `.keystore`) |
-| `SIGNING_KEY_ALIAS`      | The alias name used when creating the keystore       |
-| `SIGNING_STORE_PASSWORD` | Password for the keystore file                       |
-| `KEY_PASSWORD`           | Password for the key (can be same as store password) |
-
-#### Encoding Your Keystore
-
-To encode your keystore file to base64:
-
-**Linux/macOS:**
-
 ```bash
-base64 -i your-keystore.jks | tr -d '\n' > keystore.txt
+git clone git@github.com:ShiroiKuma0/shiroikuma-mpvkakucho.git
+cd shiroikuma-mpvkakucho
+
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
+export ANDROID_HOME="$HOME/android-sdk"
+
+# Signed release APK -> ~/tmp/shiroikuma-mpvkakucho_<version>_arm64-v8a.apk
+./gradlew buildApk
+
+# Fast dev iteration (no R8; installs beside the release build)
+./gradlew :app:assembleStandardDebug
 ```
 
-**Windows (PowerShell):**
-
-```powershell
-[Convert]::ToBase64String([IO.File]::ReadAllBytes("your-keystore.jks")) | Out-File -FilePath keystore.txt -NoNewline
-```
-
-Copy the contents of `keystore.txt` and paste it as the value for the `SIGNING_KEYSTORE` secret.
-
-### Creating a Release
-
-1. Update `versionCode` and `versionName` in `app/build.gradle.kts`
-2. Commit the changes
-3. Create and push a tag:
-   ```bash
-   git tag -a v1.0.0 -m "Release version 1.0.0"
-   git push origin v1.0.0
-   ```
-4. GitHub Actions will automatically build, sign, and create a draft release
-
-### Creating a Preview Release
-
-1. Create and push a preview tag:
-   ```bash
-   git tag -a v1.0.0-preview.1 -m "Preview release"
-   git push origin v1.0.0-preview.1
-   ```
-2. GitHub Actions will create a pre-release automatically
-
----
-
-## Acknowledgments
-
-- [mpv-android](https://github.com/mpv-android)
-- [mpvKt](https://github.com/abdallahmehiz/mpvKt)
-- [Next player](https://github.com/anilbeesetti/nextplayer)
-- [Gramophone](https://github.com/FoedusProgramme/Gramophone)
-
----
-
-## Support the Project <img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Heart%20with%20Ribbon.png" alt="Heart with Ribbon" width="25" height="25" />
-
-If you find mpvExtended useful, consider supporting the development:
-
-[![UPI](https://img.shields.io/badge/UPI-aadiinarvekar@upi-blue?style=for-the-badge&logo=google-pay&logoColor=white)](upi://pay?pa=aadiinarvekar@upi)
-
----
-## Star History <img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Travel%20and%20places/Star.png" alt="Star" width="25" height="25" />
-
-<a href="https://www.star-history.com/#marlboro-advance/mpvEx&type=date&legend=top-left">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=marlboro-advance/mpvEx&type=date&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=marlboro-advance/mpvEx&type=date&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=marlboro-advance/mpvEx&type=date&legend=top-left" />
- </picture>
-</a>
+Release signing reads a gitignored `keystore.properties` at the repo root
+(`keystore.properties_sample` documents the keys); without it the release APK simply comes out
+unsigned. Single-ABI **arm64-v8a**; `versionCode` is `<upstream> * 10000 + <build>`.
