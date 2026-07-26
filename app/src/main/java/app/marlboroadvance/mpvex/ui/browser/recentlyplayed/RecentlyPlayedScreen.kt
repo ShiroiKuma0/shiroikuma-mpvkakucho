@@ -197,6 +197,10 @@ object RecentlyPlayedScreen : Screen {
             onSettingsClick = {
               backStack.add(app.marlboroadvance.mpvex.ui.preferences.PreferencesScreen)
             },
+            // shiroikuma fork: long-press the cog to jump straight to the house UI page.
+            onSettingsLongClick = {
+              backStack.add(app.marlboroadvance.mpvex.shiroikuma.ShiroikumaUiScreen)
+            },
             isSingleSelection = selectionManager.isSingleSelection,
             onInfoClick = null, // No info in recently played
             onShareClick = null,

@@ -41,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import app.marlboroadvance.mpvex.shiroikuma.ShiroikumaUiStore
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -280,8 +281,13 @@ private fun SquigglySeekbar(
   loopEnd: Float? = null,
   modifier: Modifier = Modifier,
 ) {
-  val primaryColor = MaterialTheme.colorScheme.primary
-  val surfaceVariant = MaterialTheme.colorScheme.surfaceVariant
+  // shiroikuma fork: the seekbar's played / buffered / track colours come from the
+  // 白い熊 mpv拡張 UI page (Player → Seekbar), so they are settable independently of the accent.
+  val uiPrefs by ShiroikumaUiStore.prefs.collectAsState()
+  val primaryColor = Color(uiPrefs.seekbarPlayed)
+  val bufferedColor = Color(uiPrefs.seekbarBuffered)
+  val surfaceVariant = Color(uiPrefs.seekbarTrack)
+  val chapterMarkerDp = uiPrefs.seekbarChapterMarkerDp.dp
 
   // Manual Interaction State Tracking
   var isPressed by remember { mutableStateOf(false) }
@@ -415,24 +421,52 @@ private fun SquigglySeekbar(
     // Draw path up to progress position using clipping
     val clipTop = lineAmplitude + strokeWidth
 
+    // shiroikuma fork: chapter markers restored. Upstream deleted them from BOTH seekbar renderers
+    // ("Chapter markers removed - draw continuous path"), so a file with chapters drew as one
+    // unbroken bar. Each chapter boundary is punched out as a small gap, its half-width settable
+    // from the 白い熊 mpv拡張 UI page (Player → Seekbar → Chapter marker width; 0 = off).
+    val chapterGapHalf = chapterMarkerDp.toPx() / 2f
+    val chapterBoundaries = if (chapterGapHalf <= 0f || duration <= 0f) {
+      emptyList()
+    } else {
+      chapters
+        .map { it.start / duration * totalWidth }
+        .filter { it > chapterGapHalf && it < totalWidth - chapterGapHalf }
+        .sorted()
+    }
+
     fun drawPathWithGaps(
       startX: Float,
       endX: Float,
       color: Color,
     ) {
       if (endX <= startX) return
-      // Chapter markers removed - draw continuous path
-      clipRect(
-        left = startX,
-        top = centerY - clipTop,
-        right = endX,
-        bottom = centerY + clipTop,
-      ) {
-        drawPath(
-          path = path,
-          color = color,
-          style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
-        )
+      // Walk the segment, skipping a gap around every chapter boundary inside it.
+      var segmentStart = startX
+      val stops = chapterBoundaries.filter { it in startX..endX }
+      for (boundary in stops) {
+        val gapStart = boundary - chapterGapHalf
+        if (gapStart > segmentStart) {
+          clipRect(
+            left = segmentStart,
+            top = centerY - clipTop,
+            right = gapStart,
+            bottom = centerY + clipTop,
+          ) {
+            drawPath(path = path, color = color, style = Stroke(width = strokeWidth, cap = StrokeCap.Round))
+          }
+        }
+        segmentStart = boundary + chapterGapHalf
+      }
+      if (endX > segmentStart) {
+        clipRect(
+          left = segmentStart,
+          top = centerY - clipTop,
+          right = endX,
+          bottom = centerY + clipTop,
+        ) {
+          drawPath(path = path, color = color, style = Stroke(width = strokeWidth, cap = StrokeCap.Round))
+        }
       }
     }
 
@@ -440,11 +474,11 @@ private fun SquigglySeekbar(
     drawPathWithGaps(0f, totalProgressPx, primaryColor)
 
     if (transitionEnabled) {
-      val disabledAlpha = 77f / 255f
-      drawPathWithGaps(totalProgressPx, totalWidth, primaryColor.copy(alpha = disabledAlpha))
+      // shiroikuma fork: the trailing segment uses the settable "buffered" colour.
+      drawPathWithGaps(totalProgressPx, totalWidth, bufferedColor)
     } else {
       drawLine(
-        color = surfaceVariant.copy(alpha = 0.4f),
+        color = surfaceVariant,
         start = Offset(totalProgressPx, centerY),
         end = Offset(totalWidth, centerY),
         strokeWidth = strokeWidth,
@@ -551,7 +585,11 @@ fun StandardSeekbar(
     loopEnd: Float? = null,
     modifier: Modifier = Modifier,
 ) {
-    val primaryColor = MaterialTheme.colorScheme.primary
+    // shiroikuma fork: colours and the chapter-marker width come from the UI page.
+    val uiPrefs by ShiroikumaUiStore.prefs.collectAsState()
+    val primaryColor = Color(uiPrefs.seekbarPlayed)
+    val trackColor = Color(uiPrefs.seekbarTrack)
+    val chapterMarkerDp = uiPrefs.seekbarChapterMarkerDp.dp
     val interactionSource = remember { MutableInteractionSource() }
     
     // Animation state (same as SquigglySeekbar)
@@ -625,8 +663,19 @@ fun StandardSeekbar(
                 val thumbGapStart = (playedPx - gapHalf).coerceIn(0f, size.width)
                 val thumbGapEnd = (playedPx + gapHalf).coerceIn(0f, size.width)
                 
-                // Chapter markers removed
-                val chapterGaps = emptyList<Pair<Float, Float>>()
+                // shiroikuma fork: chapter markers restored — upstream hard-coded this to an
+                // empty list, so a file with chapters drew as one unbroken bar. Each boundary
+                // becomes a gap whose half-width is settable (0 = markers off).
+                val markerHalf = chapterMarkerDp.toPx() / 2f
+                val chapterGaps = if (markerHalf <= 0f || max <= min) {
+                    emptyList()
+                } else {
+                    chapters
+                        .map { size.width * ((it.start - min) / range).coerceIn(0f, 1f) }
+                        .filter { it > markerHalf && it < size.width - markerHalf }
+                        .sorted()
+                        .map { (it - markerHalf) to (it + markerHalf) }
+                }
                 
                 fun drawSegment(startX: Float, endX: Float, color: Color) {
                     if (endX - startX < 0.5f) return

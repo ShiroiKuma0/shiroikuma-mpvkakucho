@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.ViewQuilt
 import androidx.compose.material.icons.outlined.Audiotrack
+import androidx.compose.material.icons.outlined.Brush
 import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Gesture
@@ -38,6 +39,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import app.marlboroadvance.mpvex.R
 import app.marlboroadvance.mpvex.presentation.Screen
+import app.marlboroadvance.mpvex.shiroikuma.ShiroikumaUiScreen
 import app.marlboroadvance.mpvex.ui.utils.LocalBackStack
 import kotlinx.serialization.Serializable
 import me.zhanghai.compose.preference.Preference
@@ -118,6 +120,28 @@ object PreferencesScreen : Screen {
           
           item {
             PreferenceCard {
+              // shiroikuma fork: the house UI page — first in the section, and also reachable by
+              // long-pressing the settings cog on the main screen.
+              Preference(
+                title = { Text(text = "白い熊 mpv拡張 UI") },
+                summary = {
+                  Text(
+                    text = "Colours, fonts, sizes, borders — and Export / Import of everything settable",
+                    color = MaterialTheme.colorScheme.outline,
+                  )
+                },
+                icon = {
+                  Icon(
+                    Icons.Outlined.Brush,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                  )
+                },
+                onClick = { backstack.add(ShiroikumaUiScreen) },
+              )
+
+              PreferenceDivider()
+
               Preference(
                 title = { Text(text = stringResource(id = R.string.pref_appearance_title)) },
                 summary = { 

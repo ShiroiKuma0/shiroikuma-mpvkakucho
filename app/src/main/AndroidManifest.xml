@@ -306,5 +306,19 @@
             android:authorities="${applicationId}.networkstreaming"
             android:exported="false"
             android:grantUriPermissions="true" />
+
+        <!--
+          shiroikuma fork: the 保存復元 state-export automation contract. Exported on purpose and
+          with NO android:permission — the caller (自由作業盤) cannot hold one, so the shared token
+          in AutomationAuth is the gate, and the master switch defaults to OFF.
+        -->
+        <receiver
+            android:name=".shiroikuma.StateExportReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="shiroikuma.mpvkakucho.action.EXPORT_STATE" />
+                <action android:name="shiroikuma.mpvkakucho.action.LIST_CATEGORIES" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>

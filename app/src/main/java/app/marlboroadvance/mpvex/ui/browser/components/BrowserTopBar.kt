@@ -1,8 +1,11 @@
 package app.marlboroadvance.mpvex.ui.browser.components
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.padding
@@ -24,6 +27,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.SortByAlpha
 import androidx.compose.material.icons.filled.ViewComfy
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -44,6 +48,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
@@ -80,6 +85,8 @@ fun BrowserTopBar(
   onSortClick: (() -> Unit)? = null,
   onSearchClick: (() -> Unit)? = null,
   onSettingsClick: (() -> Unit)? = null,
+  // shiroikuma fork: long-pressing the cog jumps straight to the 白い熊 mpv拡張 UI page.
+  onSettingsLongClick: (() -> Unit)? = null,
   onDeleteClick: (() -> Unit)? = null,
   onRenameClick: (() -> Unit)? = null,
   isSingleSelection: Boolean = false,
@@ -121,6 +128,7 @@ fun BrowserTopBar(
       onSortClick = onSortClick,
       onSearchClick = onSearchClick,
       onSettingsClick = onSettingsClick,
+      onSettingsLongClick = onSettingsLongClick,
       additionalActions = additionalActions,
       modifier = modifier,
       onTitleLongPress = onTitleLongPress,
@@ -139,6 +147,7 @@ private fun NormalTopBar(
   onSortClick: (() -> Unit)?,
   onSearchClick: (() -> Unit)?,
   onSettingsClick: (() -> Unit)?,
+  onSettingsLongClick: (() -> Unit)?,
   additionalActions: @Composable RowScope.() -> Unit,
   modifier: Modifier = Modifier,
   onTitleLongPress: (() -> Unit)?,
@@ -275,9 +284,19 @@ private fun NormalTopBar(
         }
       }
       if (onSettingsClick != null) {
-        IconButton(
-          onClick = onSettingsClick,
-          modifier = Modifier.padding(horizontal = 2.dp),
+        // shiroikuma fork: an IconButton has no long-press, so the cog is a combinedClickable box —
+        // tap opens Settings, long-press jumps straight to the 白い熊 mpv拡張 UI page.
+        Box(
+          modifier = Modifier
+            .padding(horizontal = 2.dp)
+            .size(40.dp)
+            .clip(CircleShape)
+            .combinedClickable(
+              onClick = onSettingsClick,
+              onLongClick = onSettingsLongClick,
+              role = Role.Button,
+            ),
+          contentAlignment = Alignment.Center,
         ) {
           Icon(
             Icons.Filled.Settings,

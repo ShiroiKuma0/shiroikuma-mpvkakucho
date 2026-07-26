@@ -131,6 +131,48 @@ Alpha yellow *is* correct for outlines — as a stroke over black it reads as th
 divider, not a muddy fill. The theme deliberately has **no light variant**; all three getters return
 the same scheme. Other themes keep upstream's behaviour untouched.
 
+## The 白い熊 mpv拡張 UI page (`shiroikuma/`)
+
+The whole house layer lives in one package, `app/src/main/java/app/marlboroadvance/mpvex/shiroikuma/`,
+so it survives upstream rebases as a self-contained unit:
+
+| File | Role |
+| --- | --- |
+| `ShiroikumaUiPrefs.kt` | Every settable attribute + the persisted store, external-font import/list/delete/render, recent-colour swatches |
+| `ShiroikumaTheme.kt` | Builds the live `ColorScheme` + `Typography` from those prefs |
+| `ShiroikumaUiScreen.kt` | The page itself, its pickers, and the Export/Import panel + dialogs |
+| `ShiroikumaBackup.kt` | The category ZIP: export/import core, SAF directory, latest-export query |
+| `AutomationAuth.kt` / `StateExportReceiver.kt` | The 保存復元 automation contract |
+
+**Page conventions (kxkb style — keep them).** Headings are big, bold, accent-coloured and
+underlined **only as wide as their own text** (`IntrinsicSize.Min`), each preceded by a thin
+full-width hairline. Items indent one step per level (`indent(level)`), sub-headings included, and
+row padding stays **tight** — the only generous space is above a section heading. Every group has a
+live preview. Colour pickers are **RGBA** (four sliders) with one-click prefilled swatches above.
+Every size is a slider, and border/thickness/roundness sliders reach **0**.
+
+Reached from Settings → 白い熊 mpv拡張 UI, and by **long-pressing the settings cog** on any browser
+screen (`BrowserTopBar.onSettingsLongClick` — an `IconButton` has no long-press, so the cog is a
+`combinedClickable` box).
+
+**The page's knobs really drive the app**, not just the previews: the scheme and typography feed
+`MpvexTheme`, and the player reads control tint (`ui/theme/Color.kt`'s `controlColor`, now a
+`@Composable` read), seekbar played/buffered/track (`Seekbar.kt`), button size + gap
+(`PlayerControlsLandscape.kt`) and overlay dim (`PlayerControls.kt`). If you add a knob, wire it —
+a setting that only moves its own preview is a bug.
+
+**Export/Import.** One ZIP per export, `shiroikuma-mpvkakucho_<stamp>.zip`, `manifest.json` + one
+JSON per category + `fonts/`. Import **merges** and skips absent categories. The dialog chain is
+specified: success (export OK, or import "Later") closes the info dialog, the panel **and** the UI
+page; failure closes only the info dialog. The "no directory set" message is **red** until a
+directory is chosen. The export core is headless-callable so the page and `StateExportReceiver` are
+two thin callers over the same code — never duplicate export logic in the receiver.
+
+**Automation.** Token-gated, master switch **default OFF**, both rows **inside** the Export/Import
+section. Replies are plain broadcasts with `FLAG_INCLUDE_STOPPED_PACKAGES` — never a binder, never
+the ordered-broadcast result (EMUI severs both). Progress carries **real counts, never a
+percentage**. The token prefs file is deliberately absent from the export.
+
 ## Portrait parity (a standing fork requirement)
 
 **白い熊's phone is wide, and portrait must not be a cut-down mode.** Upstream treated portrait as a

@@ -230,6 +230,10 @@ object PlaylistScreen : Screen {
               onSettingsClick = {
                 backStack.add(app.marlboroadvance.mpvex.ui.preferences.PreferencesScreen)
               },
+              // shiroikuma fork: long-press the cog to jump straight to the house UI page.
+              onSettingsLongClick = {
+                backStack.add(app.marlboroadvance.mpvex.shiroikuma.ShiroikumaUiScreen)
+              },
               onRenameClick = if (selectionManager.isSingleSelection) {
                 { showRenameDialog = true }
               } else null,

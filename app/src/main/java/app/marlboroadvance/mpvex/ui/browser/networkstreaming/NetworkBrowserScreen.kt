@@ -100,6 +100,10 @@ data class NetworkBrowserScreen(
           onSettingsClick = {
             backstack.add(app.marlboroadvance.mpvex.ui.preferences.PreferencesScreen)
           },
+          // shiroikuma fork: long-press the cog to jump straight to the house UI page.
+          onSettingsLongClick = {
+            backstack.add(app.marlboroadvance.mpvex.shiroikuma.ShiroikumaUiScreen)
+          },
           onDeleteClick = null,
           onRenameClick = null,
           isSingleSelection = false,

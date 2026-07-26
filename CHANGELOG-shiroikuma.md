@@ -41,6 +41,69 @@ Base: upstream mpvEx `1.2.9` (versionCode 129).
 - Player overlay content is yellow under the house theme; other themes keep upstream's white, since
   a theme-derived colour would go dark and unreadable on the light ones.
 
+### 白い熊 mpv拡張 UI page
+
+A house-style customization page, reachable from **Settings → 白い熊 mpv拡張 UI** and by
+**long-pressing the settings cog** on any browser screen.
+
+- **kxkb page look**: every section is a big bold accent heading underlined only as wide as its own
+  text, preceded by a thin full-width hairline; items sit one indent step under their heading and
+  sub-levels one step further, so the level is obvious at a glance. Row padding is deliberately
+  tight — the only generous space is between top-level sections.
+- **Live, with previews.** Each group carries a preview of exactly what it controls (colour swatches
+  and divider, type specimen, border/corner sample, a mock player overlay with seekbar, a mock
+  browser row). Every change repaints the app immediately.
+- **Colour pickers** are 4-channel **RGBA** sliders over a live preview, with one-click choice boxes
+  above them prefilled with the house palette and every colour previously applied.
+- **External fonts**: import `.ttf`/`.otf` into the app, pick per-app font, delete again. **Every
+  option in the picker renders in its own glyphs.**
+- **Every size is a slider**, and all border/thickness/roundness knobs bottom out at **0** (= off).
+- Settable: background · surface · accent · primary and secondary text · border · divider ·
+  selection · error; player control tint, overlay text, seekbar played/buffered/track, seekbar
+  height, control button size and gap, overlay dim; border and card-border width, corner roundness,
+  divider thickness; font, weight, text scale, title/body/label sizes; browser row padding, row gap,
+  thumbnail size and roundness; and the settings pages' own heading size, underline, indent step and
+  row padding. Plus a one-tap restore of the black-yellow defaults.
+- These are not cosmetic-only: the player's control tint, seekbar colours, button size/gap and
+  overlay dim are read live by the player itself, and the font/weight/scale ride on the app's
+  typography.
+
+### Export / Import — one ZIP of everything settable
+
+The first section of the UI page, in the Kōjiki flow:
+
+- A settable **export directory**, queried on opening the page for the latest export. The
+  "no directory set" message is **red** until one is chosen, then yellow — on the page and in the
+  panel.
+- The panel lists categories with a **Select all** master toggle and sub-options indented under
+  their parent: 白い熊 UI (with *Imported font files* as a sub-option) · app settings · playlists ·
+  playback history · network connections.
+- Button line in the ArcaneChat shape: round pills, **Cancel alone on the left**, **Import and
+  Export on the right**.
+- Success shows a black/yellow-bordered **OK** dialog. Acknowledging it closes the whole chain —
+  the info dialog, the Export/Import panel beneath it, and the UI settings page. The import variant
+  offers **Later** (same chain close) and **Restart now**. Failures ("Export failed…",
+  "No categories selected.") close only the info dialog and leave the panel open.
+- One ZIP per export, named `shiroikuma-mpvkakucho_<yyyy-MM-dd_HH-mm-ss>.zip` per the family
+  convention: `manifest.json` plus one JSON per category, fonts under `fonts/`. Import **merges** —
+  absent categories are skipped and prefs are merged key by key, so an old backup never destroys
+  newer state it does not mention.
+
+### 保存復元 automation contract
+
+The sister-app state-export contract, so 自由作業盤 can back this app up headlessly:
+
+- `EXPORT_STATE` and `LIST_CATEGORIES` broadcast receivers, token-gated, **master switch default
+  OFF**. The two rows live **inside** the Export/Import section, below the export rows.
+- Replies are a fresh broadcast with `FLAG_INCLUDE_STOPPED_PACKAGES` — no binder, no reliance on
+  the ordered-broadcast result, since EMUI severs both between third-party apps. Exactly one
+  terminal reply, single-fire guarded.
+- Progress broadcasts carry **real counts**, never a percentage, throttled to one per 500 ms.
+- `path` overrides the configured directory (the app already holds `MANAGE_EXTERNAL_STORAGE`);
+  precedence is `path` → configured directory → `ERROR:no-directory`.
+- The token lives in a device-local prefs file that is **not** in the export, so it never travels
+  in a backup ZIP.
+
 ### Portrait parity — no baked-in portrait limits
 
 Upstream treated portrait as a cut-down mode. On a wide/folding screen that is pure loss, so
@@ -79,6 +142,18 @@ portrait now behaves exactly like landscape:
 
 ### Fixes
 
+- **Chapters were invisible and unlistable.** Upstream 1.2.9 had deleted chapter markers from
+  **both** seekbar renderers — `StandardSeekbar` (which draws the default *Thick* style and
+  *Standard*) hard-coded `val chapterGaps = emptyList()`, and `SquigglySeekbar`'s
+  `drawPathWithGaps` was reduced to "draw continuous path". A file with chapters therefore drew as
+  one unbroken bar. Both now punch a gap at every chapter boundary, with the gap width settable
+  from the UI page (Player → Seekbar → **Chapter marker width**, 0 = off).
+- **The Chapters sheet opened empty.** It bailed out with `if (chapter == null) return` whenever the
+  *current* chapter could not be resolved — and mpv reports `chapter` as `-1` before the first
+  chapter starts, so `chapters.getOrNull(-1)` was null and the sheet silently showed nothing even
+  though the file had chapters (the toolbar's Chapters button only renders when chapters exist, so
+  it was visible the whole time). Only an actually-empty chapter list suppresses the sheet now;
+  otherwise it falls back to the first chapter.
 - **In-app updater never offered fork builds.** It compared versions by splitting on `.` and
   `toIntOrNull()`, so our `1.2.9+1` parsed its last component as `"9+1"` → `0`; every fork build
   compared equal to every other. The comparator now parses the `+N` build tail, and the updater

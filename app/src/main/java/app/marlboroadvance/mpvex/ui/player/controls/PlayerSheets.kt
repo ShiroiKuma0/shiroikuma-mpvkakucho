@@ -213,10 +213,13 @@ fun PlayerSheets(
     }
 
     Sheets.Chapters -> {
-      if (chapter == null) return
+      // shiroikuma fork: only an EMPTY chapter list is a reason to show nothing. Upstream bailed
+      // whenever the *current* chapter could not be resolved (mpv reports -1 before the first one),
+      // which left the sheet blank on files that do have chapters.
+      val current = chapter ?: chapters.firstOrNull() ?: return
       ChaptersSheet(
         chapters,
-        currentChapter = chapter,
+        currentChapter = current,
         onClick = { onSeekToChapter(chapters.indexOf(it)) },
         onDismissRequest,
       )

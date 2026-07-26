@@ -115,6 +115,7 @@ import app.marlboroadvance.mpvex.ui.player.controls.components.SpeedControlSlide
 import app.marlboroadvance.mpvex.ui.player.controls.components.TextPlayerUpdate
 import app.marlboroadvance.mpvex.ui.player.controls.components.VolumeSlider
 import app.marlboroadvance.mpvex.ui.player.controls.components.sheets.toFixed
+import app.marlboroadvance.mpvex.shiroikuma.ShiroikumaUiStore
 import app.marlboroadvance.mpvex.ui.theme.AppTheme
 import app.marlboroadvance.mpvex.ui.theme.SHIROIKUMA_YELLOW
 import app.marlboroadvance.mpvex.ui.theme.controlColor
@@ -253,8 +254,10 @@ fun PlayerControls(
     }
   }
 
+  // shiroikuma fork: the overlay dim strength is the UI page's "Player -> Overlay dim" knob.
+  val uiPrefsForOverlay by ShiroikumaUiStore.prefs.collectAsState()
   val transparentOverlay by animateFloatAsState(
-    if (controlsShown && !areControlsLocked) .8f else 0f,
+    if (controlsShown && !areControlsLocked) uiPrefsForOverlay.overlayDimPct / 100f else 0f,
     animationSpec = playerControlsExitAnimationSpec(),
     label = "controls_transparent_overlay",
   )
@@ -1188,7 +1191,10 @@ fun PlayerControls(
           MPVLib.setPropertyInt("aid", it.id)
         }
       },
-      chapter = chapters.getOrNull(currentChapter ?: 0),
+      // shiroikuma fork: mpv reports `chapter` as -1 before the first chapter starts, and upstream's
+      // sheet bails out entirely when this resolves to null — so the Chapters sheet silently opened
+      // empty even though the file had chapters. Fall back to the first chapter.
+      chapter = chapters.getOrNull(currentChapter ?: 0) ?: chapters.firstOrNull(),
       chapters = chapters.toImmutableList(),
       onSeekToChapter = {
         MPVLib.setPropertyInt("chapter", it)
