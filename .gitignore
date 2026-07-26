@@ -13,3 +13,11 @@ app/release
 /app/standard/
 /app/fdroid/
 /app/playstore/
+
+# --- shiroikuma fork ---
+# Carries our signing password in plaintext — never commit it (keystore.properties_sample
+# documents the keys and IS tracked).
+/keystore.properties
+# CLAUDE.md and .claude/skills/ stay COMMITTED; only the local settings override is ignored.
+.claude/settings.local.json
+.scratch/
