@@ -7,6 +7,7 @@ import app.marlboroadvance.mpvex.di.FileManagerModule
 import app.marlboroadvance.mpvex.di.PreferencesModule
 import app.marlboroadvance.mpvex.presentation.crash.CrashActivity
 import app.marlboroadvance.mpvex.presentation.crash.GlobalExceptionHandler
+import app.marlboroadvance.mpvex.shiroikuma.ShiroikumaUiStore
 import app.marlboroadvance.mpvex.utils.media.MediaLibraryEvents
 import `is`.xyz.mpv.FastThumbnails
 import kotlinx.coroutines.CoroutineScope
@@ -25,6 +26,10 @@ class App : Application() {
 
   override fun onCreate() {
     super.onCreate()
+
+    // shiroikuma fork: load the 白い熊 mpv拡張 UI prefs before anything composes, so the very first
+    // frame is already the user's black-yellow look rather than the defaults.
+    ShiroikumaUiStore.init(this)
 
     // Initialize Koin
     startKoin {

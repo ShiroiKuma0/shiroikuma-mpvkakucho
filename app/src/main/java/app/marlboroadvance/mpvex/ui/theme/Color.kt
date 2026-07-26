@@ -1,10 +1,19 @@
 package app.marlboroadvance.mpvex.ui.theme
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
+import app.marlboroadvance.mpvex.shiroikuma.ShiroikumaUiStore
 
 // shiroikuma fork: the player-control tint used when "hide player buttons background" is on.
-// Upstream drew these white; the house look is pure yellow on black.
-val controlColor = Color(0xFFFFFF00)
+// Upstream drew these white and hard-coded it; it is now a live read of the 白い熊 mpv拡張 UI
+// page's "Player → Control tint" knob, so moving that slider repaints the player controls at once.
+val controlColor: Color
+  @Composable get() {
+    val prefs by ShiroikumaUiStore.prefs.collectAsState()
+    return Color(prefs.playerControlTint)
+  }
 val primaryLight = Color(0xFF794F81)
 val onPrimaryLight = Color(0xFFFFFFFF)
 val primaryContainerLight = Color(0xFFFCD6FF)

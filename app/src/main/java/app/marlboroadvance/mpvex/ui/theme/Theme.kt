@@ -48,6 +48,10 @@ import androidx.core.view.drawToBitmap
 import app.marlboroadvance.mpvex.R
 import app.marlboroadvance.mpvex.preferences.AppearancePreferences
 import app.marlboroadvance.mpvex.preferences.preference.collectAsState
+import app.marlboroadvance.mpvex.shiroikuma.ShiroikumaUiStore
+import app.marlboroadvance.mpvex.shiroikuma.shiroikumaColorScheme
+import app.marlboroadvance.mpvex.shiroikuma.shiroikumaTypography
+import androidx.compose.runtime.collectAsState as runtimeCollectAsState
 import org.koin.compose.koinInject
 import kotlin.math.hypot
 
@@ -221,7 +225,13 @@ fun MpvexTheme(content: @Composable () -> Unit) {
         DarkMode.System -> darkTheme
     }
 
+    // shiroikuma fork: under the house theme every colour comes from the live UI-page prefs, so a
+    // slider move on the 白い熊 mpv拡張 UI page repaints the app immediately.
+    // (aliased import: the app's own Preference.collectAsState shadows the runtime one)
+    val uiPrefs by ShiroikumaUiStore.prefs.runtimeCollectAsState()
+
     val colorScheme = when {
+        appTheme == AppTheme.Shiroikuma -> shiroikumaColorScheme(uiPrefs)
         appTheme.isDynamic && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             when {
                 useDarkTheme && amoledMode -> {
@@ -254,7 +264,8 @@ fun MpvexTheme(content: @Composable () -> Unit) {
         ThemeTransitionContent {
             MaterialTheme(
                 colorScheme = colorScheme,
-                typography = AppTypography,
+                // shiroikuma fork: the page's font / weight / scale ride on top of the base styles.
+                typography = shiroikumaTypography(AppTypography, uiPrefs),
                 content = content,
                 motionScheme = MotionScheme.expressive(),
             )

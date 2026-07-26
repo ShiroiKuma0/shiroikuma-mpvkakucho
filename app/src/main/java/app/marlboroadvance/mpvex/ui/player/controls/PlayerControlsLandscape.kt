@@ -18,6 +18,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import app.marlboroadvance.mpvex.shiroikuma.ShiroikumaUiStore
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -168,10 +171,12 @@ fun TopRightPlayerControlsLandscape(
   viewModel: PlayerViewModel,
   activity: PlayerActivity,
 ) {
+  // shiroikuma fork: button size and the gap between buttons come from the 白い熊 mpv拡張 UI page.
+  val uiPrefs by ShiroikumaUiStore.prefs.collectAsState()
   Row(
     modifier = Modifier.horizontalScroll(rememberScrollState()),
     verticalAlignment = Alignment.CenterVertically,
-    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.extraSmall),
+    horizontalArrangement = Arrangement.spacedBy(uiPrefs.playerButtonGapDp.dp),
   ) {
     buttons.forEach { button ->
       RenderPlayerButton(
@@ -191,7 +196,7 @@ fun TopRightPlayerControlsLandscape(
         onOpenPanel = onOpenPanel,
         viewModel = viewModel,
         activity = activity,
-        buttonSize = 45.dp,
+        buttonSize = uiPrefs.playerButtonSizeDp.dp,
       )
     }
   }
@@ -215,10 +220,12 @@ fun BottomRightPlayerControlsLandscape(
   viewModel: PlayerViewModel,
   activity: PlayerActivity,
 ) {
+  // shiroikuma fork: button size and the gap between buttons come from the 白い熊 mpv拡張 UI page.
+  val uiPrefs by ShiroikumaUiStore.prefs.collectAsState()
   Row(
     modifier = Modifier.horizontalScroll(rememberScrollState()),
     verticalAlignment = Alignment.CenterVertically,
-    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.extraSmall),
+    horizontalArrangement = Arrangement.spacedBy(uiPrefs.playerButtonGapDp.dp),
   ) {
     buttons.forEach { button ->
       RenderPlayerButton(
@@ -238,7 +245,7 @@ fun BottomRightPlayerControlsLandscape(
         onOpenPanel = onOpenPanel,
         viewModel = viewModel,
         activity = activity,
-        buttonSize = 45.dp,
+        buttonSize = uiPrefs.playerButtonSizeDp.dp,
       )
     }
   }
@@ -262,10 +269,12 @@ fun BottomLeftPlayerControlsLandscape(
   viewModel: PlayerViewModel,
   activity: PlayerActivity,
 ) {
+  // shiroikuma fork: button size and the gap between buttons come from the 白い熊 mpv拡張 UI page.
+  val uiPrefs by ShiroikumaUiStore.prefs.collectAsState()
   Row(
     modifier = Modifier.horizontalScroll(rememberScrollState()),
     verticalAlignment = Alignment.CenterVertically,
-    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.extraSmall),
+    horizontalArrangement = Arrangement.spacedBy(uiPrefs.playerButtonGapDp.dp),
   ) {
     buttons.forEach { button ->
       RenderPlayerButton(
@@ -285,7 +294,7 @@ fun BottomLeftPlayerControlsLandscape(
         onOpenPanel = onOpenPanel,
         viewModel = viewModel,
         activity = activity,
-        buttonSize = 45.dp,
+        buttonSize = uiPrefs.playerButtonSizeDp.dp,
       )
     }
   }
