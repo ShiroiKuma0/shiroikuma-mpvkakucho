@@ -592,19 +592,18 @@ fun RenderPlayerButton(
     }
 
     PlayerButton.CURRENT_CHAPTER -> {
-      if (isPortrait) {
-      } else {
-        AnimatedVisibility(
-          chapters.getOrNull(currentChapter ?: 0) != null,
-          enter = fadeIn(),
-          exit = fadeOut(),
-        ) {
-          chapters.getOrNull(currentChapter ?: 0)?.let { chapter ->
-            CurrentChapter(
-              chapter = chapter,
-              onClick = { onOpenSheet(Sheets.Chapters) },
-            )
-          }
+      // shiroikuma fork: upstream rendered nothing at all here in portrait. Portrait now uses the
+      // same control regions as landscape, so the chapter chip is shown in both orientations.
+      AnimatedVisibility(
+        chapters.getOrNull(currentChapter ?: 0) != null,
+        enter = fadeIn(),
+        exit = fadeOut(),
+      ) {
+        chapters.getOrNull(currentChapter ?: 0)?.let { chapter ->
+          CurrentChapter(
+            chapter = chapter,
+            onClick = { onOpenSheet(Sheets.Chapters) },
+          )
         }
       }
     }

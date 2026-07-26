@@ -1,15 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 白い熊 mpv拡張: traced mark, stroke-only; themed launcher icon -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-  <group
-      android:scaleX="0.8"
-      android:scaleY="0.8"
-      android:translateX="15"
-      android:translateY="10.8">
     <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M36,30 L36,78 L73,54 Z"/>
-  </group>
+        android:pathData="M 36.14 30.38 L 36.70 30.38 L 37.83 30.94 L 71.02 51.47 L 72.28 52.31 L 72.84 53.44 L 72.56 55.12 L 71.86 55.83 L 36.84 77.34 L 35.58 77.20 L 34.88 76.08 L 34.88 31.64 L 35.16 31.08 L 36.00 30.52 Z"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="2.11"
+        android:strokeLineJoin="round"
+        android:strokeLineCap="round" />
 </vector>

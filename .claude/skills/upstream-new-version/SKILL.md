@@ -142,9 +142,44 @@ Conflict-prone files, and the shape each must end up in:
   upstream. A rebase that silently restores upstream's URL would make the app offer 白い熊 *stock
   mpvEx* builds as "updates" — they would fail to install (different signing key) and, worse, would
   advertise the wrong app.
-- **Icon assets** — `mipmap-*/ic_launcher*.png`, `mipmap-anydpi/ic_launcher*.xml` and any in-app
-  logo drawable must stay our black-yellow traced icon. A binary conflict here means upstream redrew
-  theirs — keep **ours**.
+- **Icon assets** — `mipmap-*/ic_launcher*.webp`, `mipmap-*/ic_launcher_foreground.webp`,
+  `values/ic_launcher_background.xml`, `drawable/ic_launcher_foreground.xml` and
+  `drawable/ic_launcher_monochrome.xml` must stay our black-yellow traced icon. A binary conflict
+  here means upstream redrew theirs — keep **ours**.
+- **The portrait-parity layer** — this is a standing requirement, not a one-off patch (see the
+  Portrait parity table in `CLAUDE.md`). Upstream keeps portrait deliberately cut down, so its
+  changes will keep trying to reintroduce those limits. After any conflict in these files, re-check
+  that portrait still behaves exactly like landscape:
+  - `ui/player/controls/PlayerControls.kt` — the four regions must render in **both** orientations
+    (no `&& !isPortrait` on the top-right / bottom-left `AnimatedVisibility`), and the pause button,
+    seekbar and `playerUpdates` anchoring must be orientation-independent.
+  - `ui/player/controls/PlayerControlsLandscape.kt` — drives both orientations despite the name;
+    keep the `horizontalScroll` on each button row. **Do not** re-add `PlayerControlsPortrait.kt`
+    if a rebase resurrects it.
+  - `preferences/AppearancePreferences.kt` — no `portraitBottomControls` preference.
+  - `ui/preferences/PlayerControlsPreferencesScreen.kt` — `ControlRegion` has **three** entries, no
+    `PORTRAIT_BOTTOM`, and one combined settings section.
+  - `ui/player/controls/PlayerControlsShared.kt` — `CURRENT_CHAPTER` renders in both orientations.
+  - `ui/player/controls/components/sheets/PlaylistSheet.kt` — list/grid toggle shown in both, saved
+    view mode honoured in both, no portrait height cap.
+  - `ui/browser/folderlist/FolderListScreen.kt` — grid column range `1f..8f` in both orientations.
+- **`utils/update/UpdateFeature.kt`** — besides the fork release URL, keep our `isNewerVersion`
+  rewrite that parses the `+N` build tail. Upstream's version splits on `.` only and silently
+  compares every fork build as equal.
+- **The black-yellow theme layer** — also standing (see the theme table in `CLAUDE.md`). After a
+  conflict in any of these, re-check that a *fresh install* would still come up black-and-yellow:
+  - `ui/theme/AppTheme.kt` — the `Shiroikuma` entry must still be present (first), and all three
+    scheme getters must still short-circuit to `shiroikumaColorScheme()` for it. If upstream
+    refactors the builders, **do not** let our theme fall through to the generic ones — their
+    alpha-accent containers turn yellow-on-black into olive.
+  - `preferences/AppearancePreferences.kt` — defaults `AppTheme.Shiroikuma` / `DarkMode.Dark` /
+    `amoledMode = true`. Upstream's are `Dynamic` / `System` / `false`; a conflict that takes
+    upstream's side silently reverts the app to Material You.
+  - `res/values/themes.xml` — window theme stays dark with a black `windowBackground`, never back
+    to `DynamicColors.DayNight`.
+  - `ui/theme/Color.kt` — `controlColor` stays yellow.
+  - `ui/player/controls/PlayerControls.kt` — `LocalContentColor` uses the house yellow under our
+    theme rather than upstream's hard-coded `Color.White`.
 - **`gradlew`** — we set the executable bit (upstream tracks it as mode `100644`, which cannot be
   run directly). If the mode reverts, `chmod +x gradlew` again.
 

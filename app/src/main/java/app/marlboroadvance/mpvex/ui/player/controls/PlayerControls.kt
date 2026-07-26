@@ -115,6 +115,8 @@ import app.marlboroadvance.mpvex.ui.player.controls.components.SpeedControlSlide
 import app.marlboroadvance.mpvex.ui.player.controls.components.TextPlayerUpdate
 import app.marlboroadvance.mpvex.ui.player.controls.components.VolumeSlider
 import app.marlboroadvance.mpvex.ui.player.controls.components.sheets.toFixed
+import app.marlboroadvance.mpvex.ui.theme.AppTheme
+import app.marlboroadvance.mpvex.ui.theme.SHIROIKUMA_YELLOW
 import app.marlboroadvance.mpvex.ui.theme.controlColor
 import app.marlboroadvance.mpvex.ui.theme.playerRippleConfiguration
 import app.marlboroadvance.mpvex.ui.theme.spacing
@@ -213,10 +215,12 @@ fun PlayerControls(
     }
   }
 
+  // shiroikuma fork: these three regions drive BOTH orientations. Upstream gave portrait a single
+  // hard-coded bottom strip (portraitBottomControls) with no top-right or bottom-left region at
+  // all; that limitation is removed — portrait is laid out exactly like landscape.
   val topRightControlsPref by appearancePreferences.topRightControls.collectAsState()
   val bottomRightControlsPref by appearancePreferences.bottomRightControls.collectAsState()
   val bottomLeftControlsPref by appearancePreferences.bottomLeftControls.collectAsState()
-  val portraitBottomControlsPref by appearancePreferences.portraitBottomControls.collectAsState()
 
   val (topRightButtons, bottomRightButtons, bottomLeftButtons) =
     remember(
@@ -230,10 +234,6 @@ fun PlayerControls(
       val bottomL = appearancePreferences.parseButtons(bottomLeftControlsPref, usedButtons)
       listOf(topR, bottomR, bottomL)
     }
-
-  val portraitBottomButtons = remember(portraitBottomControlsPref) {
-    appearancePreferences.parseButtons(portraitBottomControlsPref, mutableSetOf())
-  }
 
   var isUnlockSliderDragging by remember { mutableStateOf(false) }
 
@@ -266,10 +266,18 @@ fun PlayerControls(
 
   DoubleTapToSeekOvals(doubleTapSeekAmount, seekText, showDoubleTapOvals, showSeekTime, showSeekTime, interactionSource)
 
+  // shiroikuma fork: the player overlay sits on a dark gradient over the video, so upstream pinned
+  // its content to white. Under the house theme that content is pure yellow instead; every other
+  // theme keeps upstream's white (a theme-derived colour would go dark — and unreadable — on the
+  // light themes).
+  val activeAppTheme by appearancePreferences.appTheme.collectAsState()
+  val playerContentColor =
+    if (activeAppTheme == AppTheme.Shiroikuma) SHIROIKUMA_YELLOW else Color.White
+
   CompositionLocalProvider(
     LocalRippleConfiguration provides playerRippleConfiguration,
     LocalPlayerButtonsClickEvent provides { resetControlsTimestamp = System.currentTimeMillis() },
-    LocalContentColor provides Color.White,
+    LocalContentColor provides playerContentColor,
   ) {
     CompositionLocalProvider(
       LocalLayoutDirection provides LayoutDirection.Ltr,
@@ -450,9 +458,11 @@ fun PlayerControls(
                   Modifier
                 }
               )
+              // shiroikuma fork: same offset in both orientations (portrait no longer has a taller
+              // top strip to clear).
               .constrainAs(playerUpdates) {
                 linkTo(parent.start, parent.end)
-                top.linkTo(parent.top, if (isPortrait) 104.dp else 64.dp)
+                top.linkTo(parent.top, 64.dp)
               },
         ) {
           when (currentPlayerUpdate) {
@@ -614,15 +624,13 @@ fun PlayerControls(
           enter = fadeIn(playerControlsEnterAnimationSpec()),
           exit = fadeOut(playerControlsExitAnimationSpec()),
           modifier =
+            // shiroikuma fork: the pause button is centred on screen in both orientations, instead
+            // of being pinned above the portrait control strip.
             Modifier.constrainAs(playerPauseButton) {
               end.linkTo(parent.absoluteRight)
               start.linkTo(parent.absoluteLeft)
-              if (isPortrait) {
-                bottom.linkTo(bottomRightControls.top, spacing.large)
-              } else {
-                top.linkTo(parent.top)
-                bottom.linkTo(parent.bottom)
-              }
+              top.linkTo(parent.top)
+              bottom.linkTo(parent.bottom)
             },
         ) {
           val showLoadingCircle by playerPreferences.showLoadingCircle.collectAsState()
@@ -879,12 +887,9 @@ fun PlayerControls(
                   Modifier
                 }
               )
+              // shiroikuma fork: the seekbar sits at the bottom of the screen in both orientations.
               .constrainAs(seekbar) {
-                if (isPortrait) {
-                  bottom.linkTo(playerPauseButton.top, spacing.small)
-                } else {
-                  bottom.linkTo(parent.bottom, spacing.small)
-                }
+                bottom.linkTo(parent.bottom, spacing.small)
                 start.linkTo(parent.start, spacing.large)
                 end.linkTo(parent.end, spacing.large)
               },
@@ -967,39 +972,28 @@ fun PlayerControls(
                   Modifier
                 }
               )
+              // shiroikuma fork: identical placement in both orientations — the top-left group
+              // always ends where the top-right group begins, instead of spanning the full width
+              // in portrait (which is what forced portrait to have no top-right region).
               .constrainAs(topLeftControls) {
-                top.linkTo(parent.top, if (isPortrait) spacing.extraLarge else spacing.small)
+                top.linkTo(parent.top, spacing.small)
                 start.linkTo(parent.start, spacing.large)
-                if (isPortrait) {
-                  width = Dimension.fillToConstraints
-                  end.linkTo(parent.end, spacing.large)
-                } else {
-                  width = Dimension.fillToConstraints
-                  end.linkTo(topRightControls.start, spacing.extraSmall)
-                }
+                width = Dimension.fillToConstraints
+                end.linkTo(topRightControls.start, spacing.extraSmall)
               },
         ) {
-          if (isPortrait) {
-            TopPlayerControlsPortrait(
-              mediaTitle = mediaTitle,
-              hideBackground = hideBackground,
-              onBackPress = onBackPress,
-              onOpenSheet = onOpenSheet,
-              viewModel = viewModel,
-            )
-          } else {
-            TopLeftPlayerControlsLandscape(
-              mediaTitle = mediaTitle,
-              hideBackground = hideBackground,
-              onBackPress = onBackPress,
-              onOpenSheet = onOpenSheet,
-              viewModel = viewModel,
-            )
-          }
+          TopLeftPlayerControlsLandscape(
+            mediaTitle = mediaTitle,
+            hideBackground = hideBackground,
+            onBackPress = onBackPress,
+            onOpenSheet = onOpenSheet,
+            viewModel = viewModel,
+          )
         }
 
+        // shiroikuma fork: the top-right region is shown in portrait too (upstream: landscape only).
         AnimatedVisibility(
-          visible = controlsShown && !areControlsLocked && !isPortrait,
+          visible = controlsShown && !areControlsLocked,
           enter =
             if (!reduceMotion) {
               slideInHorizontally(playerControlsEnterAnimationSpec()) { it } +
@@ -1087,59 +1081,34 @@ fun PlayerControls(
                   Modifier
                 }
               )
+              // shiroikuma fork: same anchoring in both orientations.
               .constrainAs(bottomRightControls) {
-                if (isPortrait) {
-                  bottom.linkTo(parent.bottom, spacing.extraLarge)
-                  start.linkTo(parent.start, spacing.large)
-                  end.linkTo(parent.end, spacing.large)
-                  width = Dimension.fillToConstraints
-                } else {
-                  bottom.linkTo(seekbar.top, spacing.small)
-                  end.linkTo(parent.end, spacing.large)
-                }
+                bottom.linkTo(seekbar.top, spacing.small)
+                end.linkTo(parent.end, spacing.large)
               },
         ) {
-          if (isPortrait) {
-            BottomPlayerControlsPortrait(
-              buttons = portraitBottomButtons,
-              chapters = chapters,
-              currentChapter = currentChapter,
-              isSpeedNonOne = isSpeedNonOne,
-              currentZoom = currentZoom,
-              aspect = aspect,
-              mediaTitle = mediaTitle,
-              hideBackground = hideBackground,
-              decoder = decoder,
-              playbackSpeed = playbackSpeed ?: 1f,
-              onBackPress = onBackPress,
-              onOpenSheet = onOpenSheet,
-              onOpenPanel = onOpenPanel,
-              viewModel = viewModel,
-              activity = activity,
-            )
-          } else {
-            BottomRightPlayerControlsLandscape(
-              buttons = bottomRightButtons,
-              chapters = chapters,
-              currentChapter = currentChapter,
-              isSpeedNonOne = isSpeedNonOne,
-              currentZoom = currentZoom,
-              aspect = aspect,
-              mediaTitle = mediaTitle,
-              hideBackground = hideBackground,
-              decoder = decoder,
-              playbackSpeed = playbackSpeed ?: 1f,
-              onBackPress = onBackPress,
-              onOpenSheet = onOpenSheet,
-              onOpenPanel = onOpenPanel,
-              viewModel = viewModel,
-              activity = activity,
-            )
-          }
+          BottomRightPlayerControlsLandscape(
+            buttons = bottomRightButtons,
+            chapters = chapters,
+            currentChapter = currentChapter,
+            isSpeedNonOne = isSpeedNonOne,
+            currentZoom = currentZoom,
+            aspect = aspect,
+            mediaTitle = mediaTitle,
+            hideBackground = hideBackground,
+            decoder = decoder,
+            playbackSpeed = playbackSpeed ?: 1f,
+            onBackPress = onBackPress,
+            onOpenSheet = onOpenSheet,
+            onOpenPanel = onOpenPanel,
+            viewModel = viewModel,
+            activity = activity,
+          )
         }
 
+        // shiroikuma fork: the bottom-left region is shown in portrait too (upstream: landscape only).
         AnimatedVisibility(
-          visible = controlsShown && !areControlsLocked && !isPortrait && !areSlidersShown,
+          visible = controlsShown && !areControlsLocked && !areSlidersShown,
           enter =
             if (!reduceMotion) {
               slideInHorizontally(playerControlsEnterAnimationSpec()) { -it } +

@@ -20,9 +20,12 @@ import kotlinx.collections.immutable.ImmutableList
 class AppearancePreferences(
   preferenceStore: PreferenceStore,
 ) {
-  val darkMode = preferenceStore.getEnum("dark_mode", DarkMode.System)
-  val appTheme = preferenceStore.getEnum("app_theme", AppTheme.Dynamic)
-  val amoledMode = preferenceStore.getBoolean("amoled_mode", false)
+  // shiroikuma fork: the house black-yellow look is ON BY DEFAULT — a fresh install must already
+  // be black-and-yellow with no user action. Upstream defaulted to Dynamic (Material You, i.e. the
+  // system wallpaper palette), System dark mode and AMOLED off.
+  val darkMode = preferenceStore.getEnum("dark_mode", DarkMode.Dark)
+  val appTheme = preferenceStore.getEnum("app_theme", AppTheme.Shiroikuma)
+  val amoledMode = preferenceStore.getBoolean("amoled_mode", true)
   val unlimitedNameLines = preferenceStore.getBoolean("unlimited_name_lines", false)
   val hidePlayerButtonsBackground = preferenceStore.getBoolean("hide_player_buttons_background", false)
   val showUnplayedOldVideoLabel = preferenceStore.getBoolean("show_unplayed_old_video_label", true)
@@ -54,11 +57,9 @@ class AppearancePreferences(
       "BACKGROUND_PLAYBACK,LOCK_CONTROLS,SCREEN_ROTATION,PLAYBACK_SPEED,REPEAT_MODE,SHUFFLE,AB_LOOP",
     )
 
-  val portraitBottomControls =
-    preferenceStore.getString(
-      "portrait_bottom_controls",
-      "SCREEN_ROTATION,DECODER,AUDIO_TRACK,SUBTITLES,BOOKMARKS_CHAPTERS,PLAYBACK_SPEED,BACKGROUND_PLAYBACK,REPEAT_MODE,SHUFFLE,VIDEO_ZOOM,FRAME_NAVIGATION,ASPECT_RATIO,PICTURE_IN_PICTURE,LOCK_CONTROLS,MORE_OPTIONS",
-    )
+  // shiroikuma fork: upstream also had a `portraitBottomControls` preference — a single strip that
+  // was the ONLY customisable region in portrait. Portrait now uses the same four regions above, so
+  // the separate preference is gone: whatever you configure applies to both orientations.
 
   fun parseButtons(
     csv: String,

@@ -60,11 +60,11 @@ import org.koin.compose.koinInject
 
 // Enum to identify which region we are editing
 @Serializable
+// shiroikuma fork: PORTRAIT_BOTTOM is gone — portrait uses the same regions as landscape.
 enum class ControlRegion {
   TOP_RIGHT,
   BOTTOM_RIGHT,
   BOTTOM_LEFT,
-  PORTRAIT_BOTTOM,
 }
 
 @Serializable
@@ -80,7 +80,6 @@ object PlayerControlsPreferencesScreen : Screen {
     val topRState by appearancePrefs.topRightControls.collectAsState()
     val bottomRState by appearancePrefs.bottomRightControls.collectAsState()
     val bottomLState by appearancePrefs.bottomLeftControls.collectAsState()
-    val portraitBottomState by appearancePrefs.portraitBottomControls.collectAsState()
 
     val topRightButtons = remember(topRState) {
       appearancePrefs.parseButtons(topRState, mutableSetOf())
@@ -92,10 +91,6 @@ object PlayerControlsPreferencesScreen : Screen {
 
     val bottomLeftButtons = remember(bottomLState) {
       appearancePrefs.parseButtons(bottomLState, mutableSetOf())
-    }
-
-    val portraitBottomButtons = remember(portraitBottomState) {
-      appearancePrefs.parseButtons(portraitBottomState, mutableSetOf())
     }
 
     Scaffold(
@@ -128,9 +123,10 @@ object PlayerControlsPreferencesScreen : Screen {
               .fillMaxSize()
               .padding(padding),
         ) {
-          // Landscape Controls Section
+          // shiroikuma fork: one set of regions for both orientations — upstream split this into a
+          // "Landscape Controls" section plus a portrait-only single strip.
           item {
-            PreferenceSectionHeader(title = "Landscape Controls")
+            PreferenceSectionHeader(title = "Player Controls (portrait & landscape)")
           }
           
           item {
@@ -162,25 +158,6 @@ object PlayerControlsPreferencesScreen : Screen {
                 },
               )
               PreferenceIconSummary(buttons = bottomLeftButtons)
-            }
-          }
-          
-          // Portrait Controls Section
-          item {
-            PreferenceSectionHeader(title = "Portrait Controls")
-          }
-
-          item {
-            PreferenceCard {
-
-            
-              PreferenceCategoryWithEditButton(
-                title = stringResource(id = R.string.pref_layout_portrait_bottom_controls),
-                onClick = {
-                  backstack.add(ControlLayoutEditorScreen(ControlRegion.PORTRAIT_BOTTOM))
-                },
-              )
-              PreferenceIconSummary(buttons = portraitBottomButtons)
             }
           }
           

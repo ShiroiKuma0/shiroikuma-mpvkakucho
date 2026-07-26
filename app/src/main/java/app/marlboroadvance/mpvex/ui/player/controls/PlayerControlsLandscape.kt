@@ -1,7 +1,12 @@
+// shiroikuma fork: despite the file name (kept as upstream's so rebases stay clean), these four
+// control groups now drive BOTH orientations. Upstream restricted them to landscape and gave
+// portrait a single hard-coded bottom strip; that limitation is removed. Each button row scrolls
+// horizontally so a crowded region is never clipped, whatever the screen width.
 package app.marlboroadvance.mpvex.ui.player.controls
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -163,6 +169,7 @@ fun TopRightPlayerControlsLandscape(
   activity: PlayerActivity,
 ) {
   Row(
+    modifier = Modifier.horizontalScroll(rememberScrollState()),
     verticalAlignment = Alignment.CenterVertically,
     horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.extraSmall),
   ) {
@@ -209,6 +216,7 @@ fun BottomRightPlayerControlsLandscape(
   activity: PlayerActivity,
 ) {
   Row(
+    modifier = Modifier.horizontalScroll(rememberScrollState()),
     verticalAlignment = Alignment.CenterVertically,
     horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.extraSmall),
   ) {
@@ -255,6 +263,7 @@ fun BottomLeftPlayerControlsLandscape(
   activity: PlayerActivity,
 ) {
   Row(
+    modifier = Modifier.horizontalScroll(rememberScrollState()),
     verticalAlignment = Alignment.CenterVertically,
     horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.extraSmall),
   ) {

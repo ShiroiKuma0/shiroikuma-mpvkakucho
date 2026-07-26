@@ -295,7 +295,7 @@ class SettingsManager(
 
   fun getDefaultExportFilename(): String {
     val dateFormat = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault())
-    return "mpvEx_settings_${dateFormat.format(Date())}.xml"
+    return "mpvkakucho_settings_${dateFormat.format(Date())}.xml"
   }
 
   data class ImportStats(
