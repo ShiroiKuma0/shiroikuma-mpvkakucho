@@ -79,6 +79,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.documentfile.provider.DocumentFile
 import app.marlboroadvance.mpvex.BuildConfig
 import app.marlboroadvance.mpvex.database.MpvExDatabase
 import app.marlboroadvance.mpvex.presentation.Screen
@@ -1180,9 +1181,11 @@ private fun ExportImportPanel(
     var busy by remember { mutableStateOf(false) }
     var info by remember { mutableStateOf<EximInfo?>(null) }
 
+    // Seeded from the same `defaultOn` flag that LIST_CATEGORIES reports, so the in-app sheet and
+    // an automation picker start from one answer instead of two guesses.
     val selected = remember {
         mutableStateMapOf<ShiroikumaBackup.Cat, Boolean>().apply {
-            ShiroikumaBackup.Cat.entries.forEach { put(it, true) }
+            ShiroikumaBackup.Cat.entries.forEach { put(it, it.defaultOn) }
         }
     }
 
@@ -1197,20 +1200,31 @@ private fun ExportImportPanel(
 
     fun selectedCats(): Set<ShiroikumaBackup.Cat> = selected.filterValues { it }.keys
 
-    fun runExport(displayName: String, open: () -> java.io.OutputStream?) {
+    /**
+     * [discard] removes the half-written destination — the in-app export unwinds through the same
+     * path as an automation `CANCEL_EXPORT`, so a failed or cancelled run never leaves a short
+     * archive behind. It also registers with [ShiroikumaBackup.beginRun], so a cancel broadcast
+     * arriving mid-export stops this one too.
+     */
+    fun runExport(displayName: String, discard: () -> Unit = {}, open: () -> java.io.OutputStream?) {
         scope.launch {
             busy = true
             runCatching {
                 withContext(Dispatchers.IO) {
-                    val out = open() ?: error("Unable to open the export destination")
-                    out.use {
-                        ShiroikumaBackup.export(
-                            context = context,
-                            db = db,
-                            appVersion = BuildConfig.VERSION_NAME,
-                            cats = selectedCats(),
-                            output = it,
-                        )
+                    ShiroikumaBackup.beginRun()
+                    try {
+                        val out = open() ?: error("Unable to open the export destination")
+                        out.use {
+                            ShiroikumaBackup.export(
+                                context = context,
+                                db = db,
+                                appVersion = BuildConfig.VERSION_NAME,
+                                cats = selectedCats(),
+                                output = it,
+                            )
+                        }
+                    } finally {
+                        ShiroikumaBackup.endRun()
                     }
                 }
             }
@@ -1219,7 +1233,14 @@ private fun ExportImportPanel(
                     onDirChanged()
                     info = EximInfo.ExportDone("Exported $summary.\n\n$displayName")
                 }
-                .onFailure { info = EximInfo.Failure("Export failed: ${it.message ?: "unknown error"}") }
+                .onFailure { failure ->
+                    withContext(Dispatchers.IO) { runCatching { discard() } }
+                    info = if (failure is ShiroikumaBackup.ExportCancelled) {
+                        EximInfo.Failure("Export cancelled — nothing was written.")
+                    } else {
+                        EximInfo.Failure("Export failed: ${failure.message ?: "unknown error"}")
+                    }
+                }
             busy = false
         }
     }
@@ -1236,7 +1257,10 @@ private fun ExportImportPanel(
         ActivityResultContracts.CreateDocument("application/zip"),
     ) { uri ->
         if (uri != null) {
-            runExport(uri.lastPathSegment ?: "export") { context.contentResolver.openOutputStream(uri) }
+            runExport(
+                displayName = uri.lastPathSegment ?: "export",
+                discard = { DocumentFile.fromSingleUri(context, uri)?.delete() },
+            ) { context.contentResolver.openOutputStream(uri) }
         }
     }
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -1270,9 +1294,12 @@ private fun ExportImportPanel(
         if (dir == null) {
             saveAsLauncher.launch(name)
         } else {
-            runExport(name) {
+            // Created on the IO thread; `created` is what a failed or cancelled run deletes again.
+            var created: DocumentFile? = null
+            runExport(name, discard = { created?.delete() }) {
                 val file = dir.createFile("application/zip", name)
                     ?: error("Unable to create a file in the export directory")
+                created = file
                 context.contentResolver.openOutputStream(file.uri)
             }
         }

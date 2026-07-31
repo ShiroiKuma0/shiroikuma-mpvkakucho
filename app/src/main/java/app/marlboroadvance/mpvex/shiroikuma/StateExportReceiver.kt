@@ -22,8 +22,16 @@ import java.util.concurrent.atomic.AtomicBoolean
  *   directory, which WINS over the configured SAF directory), `items` (optional comma list of
  *   [ShiroikumaBackup.Cat] ids; absent/empty = everything), `progress_action` (optional),
  *   plus the reply trio `reply_action` / `reply_package` / `reply_id`.
- * - [ACTION_LIST_CATEGORIES]: token-gated category enumeration for the caller's item picker,
- *   as `id<TAB>label` lines, with a third TAB field naming the parent on sub-options.
+ * - [ACTION_LIST_CATEGORIES]: token-gated category enumeration for the caller's item picker, as
+ *   `id<TAB>label<TAB>parent<TAB>on|off` lines — the third field is empty on a top-level item and
+ *   the fourth states whether it starts ticked ([ShiroikumaBackup.Cat.defaultOn]), so the picker
+ *   is told the answer rather than guessing it.
+ * - [ACTION_CANCEL_EXPORT]: stop the running export. Extras: `token` (required) and an optional
+ *   `reply_id` (absent = whatever is running). Fire-and-forget — it **never answers**, and it is a
+ *   silent no-op when nothing is running or the export already finished. The export unwinds at the
+ *   next entry boundary, its half-written destination is deleted, and the original request gets
+ *   `ERROR:cancelled` through the normal reply channel. Routed through this exported receiver on
+ *   purpose: a third-party caller cannot reach an `exported="false"` service.
  *
  * Reply: a FRESH broadcast to `reply_package`, extras `reply_id` (echoed verbatim) + `result`.
  * Exactly one terminal reply, single-fire guarded by an [AtomicBoolean]. **No binders and no
@@ -61,6 +69,15 @@ class StateExportReceiver : BroadcastReceiver() {
             )
         }
 
+        // Cancel answers nothing at all, not even a refusal, so it is handled before the gates
+        // that reply — it only has to honour the same token check.
+        if (action == ACTION_CANCEL_EXPORT) {
+            if (!AutomationAuth.enabled(app)) return
+            if (!AutomationAuth.isTokenValid(app, token)) return
+            ShiroikumaBackup.requestCancel(replyId)
+            return
+        }
+
         // Gate first — "disabled" and "bad token" stay distinct because they debug differently.
         if (!AutomationAuth.enabled(app)) {
             reply("ERROR:automation disabled")
@@ -75,14 +92,15 @@ class StateExportReceiver : BroadcastReceiver() {
             ACTION_LIST_CATEGORIES -> {
                 reply(
                     "OK:" + ShiroikumaBackup.Cat.entries.joinToString("\n") { cat ->
-                        if (cat.parent == null) "${cat.id}\t${cat.label}" else "${cat.id}\t${cat.label}\t${cat.parent}"
+                        val on = if (cat.defaultOn) "on" else "off"
+                        "${cat.id}\t${cat.label}\t${cat.parent ?: ""}\t$on"
                     },
                 )
             }
 
             ACTION_EXPORT_STATE -> {
                 val cats: Set<ShiroikumaBackup.Cat> = if (items.isEmpty()) {
-                    ShiroikumaBackup.Cat.entries.toSet()
+                    ShiroikumaBackup.Cat.defaultSelection
                 } else {
                     val ids = items.split(",").map { it.trim() }.filter { it.isNotEmpty() }
                     val resolved = ids.mapNotNull { ShiroikumaBackup.Cat.byId(it) }
@@ -111,6 +129,10 @@ class StateExportReceiver : BroadcastReceiver() {
 
                 val pending = goAsync()
                 CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+                    // Removes the half-written destination; cleared once the archive is complete,
+                    // so a cancelled or failed run leaves the directory exactly as it found it.
+                    var discardPartial: (() -> Unit)? = null
+                    ShiroikumaBackup.beginRun(replyId)
                     try {
                         var lastProgress = 0L
                         val progress = ShiroikumaBackup.Progress { current, total, unit, text ->
@@ -141,6 +163,7 @@ class StateExportReceiver : BroadcastReceiver() {
                         when (target) {
                             is File -> {
                                 val out = File(target, fileName)
+                                discardPartial = { out.delete() }
                                 summary = out.outputStream().use { stream ->
                                     ShiroikumaBackup.export(app, db, BuildConfig.VERSION_NAME, cats, stream, progress)
                                 }
@@ -151,6 +174,7 @@ class StateExportReceiver : BroadcastReceiver() {
                                 val dir = target as androidx.documentfile.provider.DocumentFile
                                 val doc = dir.createFile("application/zip", fileName)
                                     ?: error("cannot create file in the export directory")
+                                discardPartial = { doc.delete() }
                                 summary = app.contentResolver.openOutputStream(doc.uri).use { stream ->
                                     if (stream == null) error("cannot open the export destination")
                                     ShiroikumaBackup.export(app, db, BuildConfig.VERSION_NAME, cats, stream, progress)
@@ -160,10 +184,17 @@ class StateExportReceiver : BroadcastReceiver() {
                             }
                         }
 
+                        discardPartial = null
                         reply("OK:$absolutePath|$sizeBytes|${ShiroikumaBackup.humanSize(sizeBytes)}|$summary")
+                    } catch (cancelled: ShiroikumaBackup.ExportCancelled) {
+                        runCatching { discardPartial?.invoke() }
+                        reply("ERROR:cancelled")
                     } catch (t: Throwable) {
+                        runCatching { discardPartial?.invoke() }
                         reply("ERROR:${t.message ?: "export failed"}")
                     } finally {
+                        // The goAsync() equivalent of "stop the service, release the wakelock".
+                        ShiroikumaBackup.endRun()
                         pending.finish()
                     }
                 }
@@ -174,6 +205,7 @@ class StateExportReceiver : BroadcastReceiver() {
     companion object {
         const val ACTION_EXPORT_STATE = "shiroikuma.mpvkakucho.action.EXPORT_STATE"
         const val ACTION_LIST_CATEGORIES = "shiroikuma.mpvkakucho.action.LIST_CATEGORIES"
+        const val ACTION_CANCEL_EXPORT = "shiroikuma.mpvkakucho.action.CANCEL_EXPORT"
 
         private const val EXTRA_TOKEN = "token"
         private const val EXTRA_PATH = "path"
