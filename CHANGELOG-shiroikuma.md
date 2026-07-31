@@ -3,6 +3,43 @@
 Changes this fork makes on top of stock [mpvEx](https://github.com/marlboro-advance/mpvEx).
 Upstream's own release notes are not duplicated here.
 
+## 1.2.9+5 — 2026-07-31
+
+Base: upstream mpvEx `1.2.9` (versionCode 129) — unchanged; upstream has had no commits since March.
+
+### 保存復元 automation — categories state their own default, and an export can be cancelled
+
+- **`LIST_CATEGORIES` now emits the contract's fourth field**, `id⇥label⇥parent⇥on|off`, with an
+  empty third field on top-level items. The flag says whether an item **starts ticked**, so a
+  caller's backup-item picker is told the app's answer instead of assuming everything. Nothing this
+  app exports is large, derived *and* re-creatable — the case the `off` flag exists for — so every
+  category is `on`; the value of sending it is that the app states the default and any category
+  added later inherits a field that is already there.
+- The flag lives on the category definition itself (`Cat.defaultOn`), and **the in-app
+  Export/Import picker seeds from the same flag**, so the in-app sheet and an automation picker
+  start from one answer rather than two guesses. "No selection given" on the export side — an
+  absent `items` extra — now resolves to the `on` set rather than to every entry.
+- **New `CANCEL_EXPORT` action** on the same exported receiver, with the same token gate and an
+  optional `reply_id` (absent = whatever is running, unambiguous because two exports at once are
+  forbidden). It is declared on the *receiver* deliberately: a third-party caller cannot start an
+  `exported="false"` service, so a stop path living on one would be unreachable.
+- The cancel is **fire-and-forget — it answers nothing at all**, not even a refusal, and it is a
+  **silent no-op** when nothing is running, when it names a different request, or when the export
+  has already finished. Safe to send at any time.
+- The export unwinds at the **next entry boundary** — a `@Volatile` flag read between top-level
+  categories, between font files and before the manifest — never by interrupting a thread
+  mid-`write()` and never by killing the process.
+- **A cancelled export leaves the backup directory exactly as it found it.** The half-written
+  destination is deleted, on cancel and on every other failure, for both the plain-file and SAF
+  destinations — no short archive left behind for the next "latest export" query to find.
+- The original request still gets its terminal reply, `ERROR:cancelled`, through the normal
+  broadcast channel and guarded by the same single-fire latch, so it can never double-fire with a
+  success. It is sent even though nobody may still be listening: it is what proves the run ended
+  rather than continuing unseen.
+- **The in-app export routes through the same path** — it registers with the same run flag, so a
+  cancel broadcast stops it too, and it deletes its own partial file on failure or cancel, for both
+  the configured-directory and the save-as destination. One way to unwind, not two.
+
 ## 1.2.9+4 — 2026-07-26 (first release)
 
 Base: upstream mpvEx `1.2.9` (versionCode 129).

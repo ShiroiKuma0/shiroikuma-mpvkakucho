@@ -12,7 +12,7 @@ export/import of everything settable, headless backup automation, and restored c
 
 Installs **side-by-side** with mpvEx (app id `shiroikuma.mpvkakucho`).
 
-**📥 Latest release: [`1.2.9+4`](https://github.com/ShiroiKuma0/shiroikuma-mpvkakucho/releases/latest)** — [all releases & APK downloads »](https://github.com/ShiroiKuma0/shiroikuma-mpvkakucho/releases)
+**📥 Latest release: [`1.2.9+5`](https://github.com/ShiroiKuma0/shiroikuma-mpvkakucho/releases/latest)** — [all releases & APK downloads »](https://github.com/ShiroiKuma0/shiroikuma-mpvkakucho/releases)
 
 </div>
 
@@ -69,8 +69,12 @@ Pick an export directory once and the page tells you when you last backed up.
 ## 🤖 Headless backup automation
 
 The app answers a token-gated `EXPORT_STATE` broadcast, so a sister-app task can back it up with no
-UI at all — reporting real progress counts and replying with the written path and size. The master
-switch is **off** until you turn it on, and the token never travels inside a backup.
+UI at all — reporting real progress counts and replying with the written path and size. It also
+enumerates its own categories on request, stating which of them start ticked, so the caller's picker
+is told the answer rather than guessing it. A running export can be **cancelled** from outside: it
+unwinds at the next entry boundary and deletes its half-written file, leaving the backup directory
+exactly as it found it. The master switch is **off** until you turn it on, and the token never
+travels inside a backup.
 
 ---
 
