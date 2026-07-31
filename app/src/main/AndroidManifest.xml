@@ -318,6 +318,7 @@
             <intent-filter>
                 <action android:name="shiroikuma.mpvkakucho.action.EXPORT_STATE" />
                 <action android:name="shiroikuma.mpvkakucho.action.LIST_CATEGORIES" />
+                <action android:name="shiroikuma.mpvkakucho.action.CANCEL_EXPORT" />
             </intent-filter>
         </receiver>
     </application>

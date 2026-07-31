@@ -58,8 +58,18 @@ object ShiroikumaBackup {
     /**
      * A selectable export/import category. [id] is the ZIP entry name (`<id>.json`) and the id the
      * automation contract accepts in `items`. [parent] is set on sub-options.
+     *
+     * [defaultOn] is the app's own answer to "does this item start ticked?" — the fourth field of a
+     * `LIST_CATEGORIES` line, and the seed of the in-app Export/Import picker, so both start from
+     * the same statement. It is `off` only for something large, derived AND re-creatable (a
+     * regenerable thumbnail cache, downloaded tiles); this app has none, so everything is `on`.
      */
-    enum class Cat(val id: String, val label: String, val parent: String? = null) {
+    enum class Cat(
+        val id: String,
+        val label: String,
+        val parent: String? = null,
+        val defaultOn: Boolean = true,
+    ) {
         UI("ui", "白い熊 UI (colours · fonts · sizes · layout)"),
         UI_FONTS("ui.fonts", "Imported font files", parent = "ui"),
         SETTINGS("settings", "App settings (player · gestures · decoder · subtitles · audio · advanced)"),
@@ -74,6 +84,9 @@ object ShiroikumaBackup {
             val topLevel: List<Cat> get() = entries.filter { it.parent == null }
 
             fun childrenOf(cat: Cat): List<Cat> = entries.filter { it.parent == cat.id }
+
+            /** What "no selection given" means on the export side — exactly the `on` categories. */
+            val defaultSelection: Set<Cat> get() = entries.filter { it.defaultOn }.toSet()
         }
     }
 
@@ -147,6 +160,55 @@ object ShiroikumaBackup {
         else -> "$bytes B"
     }
 
+    // ---- cancellation --------------------------------------------------------------------------
+
+    /**
+     * Thrown out of [export] when a cancel arrived. Every caller answers it the same way: delete
+     * the half-written destination, then report `cancelled` — a cancelled export must leave the
+     * backup directory **exactly as it found it**, with no short archive left behind.
+     */
+    class ExportCancelled : Exception("cancelled")
+
+    // One export at a time is the contract, so a pair of flags is the whole registry. The write
+    // loop reads [cancelRequested] between entries and unwinds at the next boundary — never a
+    // thread interrupt, never a mid-write() abort.
+    @Volatile private var running = false
+    @Volatile private var runningId: String? = null
+    @Volatile private var cancelRequested = false
+
+    /** Register the run that is about to start; [replyId] is the request a cancel may name. */
+    @Synchronized
+    fun beginRun(replyId: String? = null) {
+        running = true
+        runningId = replyId?.trim()?.takeIf { it.isNotEmpty() }
+        cancelRequested = false
+    }
+
+    @Synchronized
+    fun endRun() {
+        running = false
+        runningId = null
+        cancelRequested = false
+    }
+
+    /**
+     * Flag the running export for cancellation. An empty/absent [replyId] means "whatever is
+     * running", which is unambiguous because two at once are forbidden. Returns false when nothing
+     * matched — arriving before, after or between runs is a silent no-op, not an error.
+     */
+    @Synchronized
+    fun requestCancel(replyId: String? = null): Boolean {
+        if (!running) return false
+        val wanted = replyId?.trim().orEmpty()
+        if (wanted.isNotEmpty() && runningId != null && wanted != runningId) return false
+        cancelRequested = true
+        return true
+    }
+
+    private fun checkCancelled() {
+        if (cancelRequested) throw ExportCancelled()
+    }
+
     // ---- export --------------------------------------------------------------------------------
 
     /** Progress callback: (current, total, unit, human text). Throttling is the caller's job. */
@@ -166,7 +228,7 @@ object ShiroikumaBackup {
         output: OutputStream,
         onProgress: Progress? = null,
     ): String {
-        val selected = cats.ifEmpty { Cat.entries.toSet() }
+        val selected = cats.ifEmpty { Cat.defaultSelection }
         // A sub-option implies its parent's presence in the archive listing.
         val tops = Cat.topLevel.filter { top ->
             top in selected || Cat.childrenOf(top).any { it in selected }
@@ -178,6 +240,7 @@ object ShiroikumaBackup {
             val written = mutableListOf<String>()
 
             tops.forEach { cat ->
+                checkCancelled()
                 onProgress?.report(done, total, "区分", "区分 ${done + 1}/$total — ${cat.label}")
                 when (cat) {
                     Cat.UI -> {
@@ -188,6 +251,7 @@ object ShiroikumaBackup {
                         if (Cat.UI_FONTS in selected) {
                             val fonts = ShiroikumaUiStore.fontsDir().listFiles()?.filter { it.isFile }.orEmpty()
                             fonts.forEach { f ->
+                                checkCancelled()
                                 zip.putNextEntry(ZipEntry("$FONTS_DIR/${f.name}"))
                                 f.inputStream().use { it.copyTo(zip) }
                                 zip.closeEntry()
@@ -216,6 +280,7 @@ object ShiroikumaBackup {
                 onProgress?.report(done, total, "区分", "区分 $done/$total — ${cat.label}")
             }
 
+            checkCancelled()
             val manifest = JSONObject().apply {
                 put("format", FORMAT)
                 put("version", VERSION)
