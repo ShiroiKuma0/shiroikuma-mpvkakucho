@@ -142,7 +142,8 @@ so it survives upstream rebases as a self-contained unit:
 | `ShiroikumaTheme.kt` | Builds the live `ColorScheme` + `Typography` from those prefs |
 | `ShiroikumaUiScreen.kt` | The page itself, its pickers, and the Export/Import panel + dialogs |
 | `ShiroikumaBackup.kt` | The category ZIP: export/import core, SAF directory, latest-export query |
-| `AutomationAuth.kt` / `StateExportReceiver.kt` | The 保存復元 automation contract |
+| `AutomationAuth.kt` / `StateExportReceiver.kt` | The 保存復元 automation contract — the gate, and §1's broadcast half |
+| `AutomationProvider.kt` / `AutomationDataService.kt` / `AutomationCallers.kt` / `AutomationJobs.kt` | The v2 data door: describe/export/import/cancel over a caller-supplied file descriptor |
 
 **Page conventions (kxkb style — keep them).** Headings are big, bold, accent-coloured and
 underlined **only as wide as their own text** (`IntrinsicSize.Min`), each preceded by a thin
@@ -168,10 +169,25 @@ page; failure closes only the info dialog. The "no directory set" message is **r
 directory is chosen. The export core is headless-callable so the page and `StateExportReceiver` are
 two thin callers over the same code — never duplicate export logic in the receiver.
 
-**Automation.** Token-gated, master switch **default OFF**, both rows **inside** the Export/Import
-section. Replies are plain broadcasts with `FLAG_INCLUDE_STOPPED_PACKAGES` — never a binder, never
-the ordered-broadcast result (EMUI severs both). Progress carries **real counts, never a
-percentage**. The token prefs file is deliberately absent from the export.
+**Automation (contract v2).** Master switch **default ON**, 「Use authorization token?」 **default
+OFF**, and the token row shown **only** while that is on — all three **inside** the Export/Import
+section. Both checks live in one place, `AutomationAuth.refuse()`; a token sent to an app that does
+not require one is **ignored, never refused**. Replies are plain broadcasts with
+`FLAG_INCLUDE_STOPPED_PACKAGES` — never a binder, never the ordered-broadcast result (EMUI severs
+both) — and the manifest `<queries>` block is what stops `setPackage()` failing silently on Android
+11+. Progress carries **real counts, never a percentage**. The token prefs file is deliberately
+absent from the export.
+
+**The data door** (`AutomationProvider` / `AutomationDataService` / `AutomationCallers` /
+`AutomationJobs`) is how 応用管理 backs this app up *with its data* and restores it onto a wiped
+phone. Exported provider, no permission: the caller is checked by **exact package name (never a
+prefix)**, uid cross-check, and a **pinned signing certificate**. The payload moves through a
+caller-supplied `ParcelFileDescriptor` — `dup()`ed before it leaves the binder call, closed in a
+`finally` — and the work runs in a foreground service, never in the call. **`import` exists only
+here**, never as a broadcast action: the receiver is exported with no permission, so an import there
+would let any app on the phone wipe every watch position and playlist. `describe`'s `contains` must
+keep saying that **video files are not included** — this app's data is state, not media, and 応用管理
+sizes the backup from that list.
 
 ## Portrait parity (a standing fork requirement)
 

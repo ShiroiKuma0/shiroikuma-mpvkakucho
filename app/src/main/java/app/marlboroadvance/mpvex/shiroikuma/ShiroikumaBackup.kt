@@ -46,6 +46,17 @@ object ShiroikumaBackup {
      */
     const val EXPORT_PREFIX = "shiroikuma-mpvkakucho_"
 
+    /**
+     * The last line of [AutomationProvider]'s `contains` header, and the thing a caller most needs
+     * told about a *player's* backup.
+     *
+     * This app's data is a few hundred kilobytes of watch positions, playlists, connections and
+     * settings. The videos are not its data and never enter the archive — a playlist entry is a
+     * path, not a copy. Said plainly here because 応用管理 sizes a backup from that list, and would
+     * otherwise budget for a media library it is never going to be handed.
+     */
+    const val CONTAINS_NO_MEDIA = "Video files are NOT included — app state only"
+
     private const val MANIFEST = "manifest.json"
     private const val FONTS_DIR = "fonts"
     private const val MAX_ENTRY_BYTES = 64L * 1024 * 1024
@@ -69,13 +80,18 @@ object ShiroikumaBackup {
         val label: String,
         val parent: String? = null,
         val defaultOn: Boolean = true,
+        val briefLabel: String = label,
     ) {
-        UI("ui", "白い熊 UI (colours · fonts · sizes · layout)"),
-        UI_FONTS("ui.fonts", "Imported font files", parent = "ui"),
-        SETTINGS("settings", "App settings (player · gestures · decoder · subtitles · audio · advanced)"),
-        PLAYLISTS("playlists", "Playlists"),
-        HISTORY("history", "Playback history & resume positions"),
-        NETWORK("network", "Network connections (SMB · FTP · WebDAV)");
+        UI("ui", "白い熊 UI (colours · fonts · sizes · layout)", briefLabel = "白い熊 UI theme"),
+        UI_FONTS("ui.fonts", "Imported font files", parent = "ui", briefLabel = "Imported fonts"),
+        SETTINGS(
+            "settings",
+            "App settings (player · gestures · decoder · subtitles · audio · advanced)",
+            briefLabel = "App settings",
+        ),
+        PLAYLISTS("playlists", "Playlists", briefLabel = "Playlists (file paths only)"),
+        HISTORY("history", "Playback history & resume positions", briefLabel = "Watch positions & history"),
+        NETWORK("network", "Network connections (SMB · FTP · WebDAV)", briefLabel = "Network connections");
 
         companion object {
             fun byId(id: String): Cat? = entries.firstOrNull { it.id == id }
@@ -205,9 +221,6 @@ object ShiroikumaBackup {
         return true
     }
 
-    private fun checkCancelled() {
-        if (cancelRequested) throw ExportCancelled()
-    }
 
     // ---- export --------------------------------------------------------------------------------
 
@@ -219,6 +232,12 @@ object ShiroikumaBackup {
     /**
      * Write the selected [cats] to [output] as one ZIP. Returns a short summary for the UI
      * ("3 categories"). The stream is NOT closed here — the caller owns it.
+     *
+     * [isCancelled] is the **second** way to stop a run, for callers that do not own the
+     * [beginRun]/[requestCancel] registry — the data door of [AutomationDataService], whose jobs
+     * are identified by a `job_id` the provider handed out and which may be cancelled before this
+     * function is even entered. The two are independent on purpose: a data-door export and a
+     * broadcast export must not be able to cancel each other by clobbering one shared flag.
      */
     fun export(
         context: Context,
@@ -227,7 +246,14 @@ object ShiroikumaBackup {
         cats: Set<Cat>,
         output: OutputStream,
         onProgress: Progress? = null,
+        isCancelled: (() -> Boolean)? = null,
     ): String {
+        // Polled at entry boundaries only — never mid-write, so a cancelled archive is never half
+        // a file. The caller deletes the partial destination on the way out.
+        fun checkCancelled() {
+            if (cancelRequested || isCancelled?.invoke() == true) throw ExportCancelled()
+        }
+
         val selected = cats.ifEmpty { Cat.defaultSelection }
         // A sub-option implies its parent's presence in the archive listing.
         val tops = Cat.topLevel.filter { top ->
@@ -355,17 +381,68 @@ object ShiroikumaBackup {
     data class ImportResult(val summaryLines: List<String>)
 
     /**
+     * The categories an archive actually carries — read from its entries, not from its manifest.
+     *
+     * The data door restores what it was handed rather than what it knows how to restore: asking
+     * for a category the archive lacks is how a restore ends up reporting success over nothing.
+     * Entry names are the authority because they are what [import] itself walks, so the two can
+     * never disagree about what is in the file.
+     */
+    fun categoriesIn(bytes: ByteArray): Set<Cat> = categoriesIn { ByteArrayInputStream(bytes) }
+
+    /**
+     * [categoriesIn] over an archive that is not in memory — [open] is called once and must hand
+     * back a fresh stream over the whole file. The data door spools a restore to disk rather than
+     * reading it into a byte array, so its archive is a file, not a `ByteArray`.
+     */
+    fun categoriesIn(open: () -> InputStream): Set<Cat> {
+        val found = mutableSetOf<Cat>()
+        runCatching {
+            ZipInputStream(open()).use { zip ->
+                var entry: ZipEntry? = zip.nextEntry
+                while (entry != null) {
+                    val name = entry.name
+                    when {
+                        name.startsWith("$FONTS_DIR/") && !entry.isDirectory -> found += Cat.UI_FONTS
+                        name.endsWith(".json") && name != MANIFEST ->
+                            Cat.byId(name.removeSuffix(".json"))?.let { found += it }
+                    }
+                    zip.closeEntry()
+                    entry = zip.nextEntry
+                }
+            }
+        }
+        return found
+    }
+
+    /**
      * Merge the archive into the app. Absent categories are skipped; prefs are merged key by key
      * (never cleared) and DB rows are inserted with REPLACE, so importing an old backup never
      * destroys newer state that the archive simply does not mention.
      */
-    fun import(context: Context, db: MpvExDatabase, bytes: ByteArray, cats: Set<Cat>): ImportResult {
+    fun import(context: Context, db: MpvExDatabase, bytes: ByteArray, cats: Set<Cat>): ImportResult =
+        import(context, db, { ByteArrayInputStream(bytes) }, cats)
+
+    /**
+     * [import] over an archive that is not in memory — [open] is called once and must hand back a
+     * fresh stream over the whole file.
+     *
+     * This is the shape the data door uses: a restore arrives on a descriptor whose size the app
+     * does not choose, and reading an arbitrarily large one into a `ByteArray` first is how a
+     * restore dies of `OutOfMemory` on the phone it was meant to rescue.
+     */
+    fun import(
+        context: Context,
+        db: MpvExDatabase,
+        open: () -> InputStream,
+        cats: Set<Cat>,
+    ): ImportResult {
         val selected = cats.ifEmpty { Cat.entries.toSet() }
         val lines = mutableListOf<String>()
         var totalRead = 0L
         var fontsRestored = 0
 
-        ZipInputStream(ByteArrayInputStream(bytes)).use { zip ->
+        ZipInputStream(open()).use { zip ->
             var entry: ZipEntry? = zip.nextEntry
             while (entry != null) {
                 val name = entry.name
@@ -441,7 +518,13 @@ object ShiroikumaBackup {
                 }
             }
         }
-        editor.apply()
+        // commit(), not apply(): on the restore path 応用管理 force-stops this app the instant the
+        // import replies success — deliberately, because a running process writes its cached
+        // SharedPreferences back out at orderly shutdown and would silently undo the import. An
+        // apply() that had not yet reached disk when the kill arrived would be lost with it. Both
+        // callers already run the import off the main thread, so the synchronous write costs
+        // nothing (白い熊 mpv拡張, 2026-09-04).
+        editor.commit()
     }
 
     private fun restoreTable(db: MpvExDatabase, table: String, rows: JSONArray): Int {

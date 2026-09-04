@@ -17,16 +17,22 @@ import java.util.concurrent.atomic.AtomicBoolean
  * The sister-app **state-export automation contract**, implemented for this app — the same wire
  * shape every 白い熊 app exposes so a 保存復元 task in 自由作業盤 can back them all up headlessly.
  *
+ * This is the **unauthenticated half** of the automation surface, and that is deliberate: it only
+ * ever writes where it was told to and reports what it did. Everything that moves data through a
+ * caller-supplied descriptor — and `import`, which never gets a broadcast action at all — lives
+ * behind [AutomationProvider], which knows who is calling. The `token` extra is therefore optional
+ * since v2 and consulted only when 「Use authorization token?」 is on; see [AutomationAuth.refuse].
+ *
  * - [ACTION_EXPORT_STATE]: run the full category-ZIP export ([ShiroikumaBackup]) with no UI.
- *   Extras (all String): `token` (required — [AutomationAuth]), `path` (optional absolute
+ *   Extras (all String): `token` (optional — [AutomationAuth]), `path` (optional absolute
  *   directory, which WINS over the configured SAF directory), `items` (optional comma list of
- *   [ShiroikumaBackup.Cat] ids; absent/empty = everything), `progress_action` (optional),
- *   plus the reply trio `reply_action` / `reply_package` / `reply_id`.
- * - [ACTION_LIST_CATEGORIES]: token-gated category enumeration for the caller's item picker, as
+ *   [ShiroikumaBackup.Cat] ids; absent/empty = the DEFAULT set, not everything),
+ *   `progress_action` (optional), plus the reply trio `reply_action` / `reply_package` / `reply_id`.
+ * - [ACTION_LIST_CATEGORIES]: category enumeration for the caller's item picker, as
  *   `id<TAB>label<TAB>parent<TAB>on|off` lines — the third field is empty on a top-level item and
  *   the fourth states whether it starts ticked ([ShiroikumaBackup.Cat.defaultOn]), so the picker
  *   is told the answer rather than guessing it.
- * - [ACTION_CANCEL_EXPORT]: stop the running export. Extras: `token` (required) and an optional
+ * - [ACTION_CANCEL_EXPORT]: stop the running export. Extras: `token` (optional) and an optional
  *   `reply_id` (absent = whatever is running). Fire-and-forget — it **never answers**, and it is a
  *   silent no-op when nothing is running or the export already finished. The export unwinds at the
  *   next entry boundary, its half-written destination is deleted, and the original request gets
@@ -69,22 +75,18 @@ class StateExportReceiver : BroadcastReceiver() {
             )
         }
 
-        // Cancel answers nothing at all, not even a refusal, so it is handled before the gates
-        // that reply — it only has to honour the same token check.
+        // Cancel answers nothing at all, not even a refusal, so it is handled before the gate that
+        // replies — it only has to pass the same gate silently.
         if (action == ACTION_CANCEL_EXPORT) {
-            if (!AutomationAuth.enabled(app)) return
-            if (!AutomationAuth.isTokenValid(app, token)) return
+            if (AutomationAuth.refuse(app, token) != null) return
             ShiroikumaBackup.requestCancel(replyId)
             return
         }
 
-        // Gate first — "disabled" and "bad token" stay distinct because they debug differently.
-        if (!AutomationAuth.enabled(app)) {
-            reply("ERROR:automation disabled")
-            return
-        }
-        if (!AutomationAuth.isTokenValid(app, token)) {
-            reply("ERROR:bad token")
+        // The gate, in one place. Since v2 the token is only consulted when this app asks for one:
+        // a token sent to an app that does not require one is ignored, never refused.
+        AutomationAuth.refuse(app, token)?.let {
+            reply(it)
             return
         }
 
