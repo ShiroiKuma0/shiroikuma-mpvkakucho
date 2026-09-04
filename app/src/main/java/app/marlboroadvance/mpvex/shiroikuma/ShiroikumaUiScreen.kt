@@ -135,6 +135,7 @@ fun ShiroikumaUiPage(onBack: () -> Unit) {
     var showResetConfirm by remember { mutableStateOf(false) }
 
     var automationEnabled by remember { mutableStateOf(AutomationAuth.enabled(context)) }
+    var automationRequireToken by remember { mutableStateOf(AutomationAuth.requireToken(context)) }
     var automationToken by remember { mutableStateOf(AutomationAuth.token(context)) }
 
     // Queried on opening the page (and after any change) — "latest export in the chosen directory".
@@ -235,13 +236,15 @@ fun ShiroikumaUiPage(onBack: () -> Unit) {
                     }
                 }
             }
-            // Automation lives INSIDE this section, right below the export rows (family contract).
+            // Automation lives INSIDE this section, right below the export rows (family contract):
+            // this is a backup feature, so 白い熊 finds it where backup lives, and every sister app
+            // looks the same. Never a separate "Automation" section, page or dialog.
             item {
                 SwitchRow(
                     level = 1,
                     prefs = prefs,
                     label = "Automation export",
-                    description = "Let sister-app tasks trigger this app's export via the token-gated EXPORT_STATE intent.",
+                    description = "Let sister apps trigger this app's export, and let 応用管理 back its data up and put it back. On by default — turn it off to close this app to automation entirely.",
                     checked = automationEnabled,
                 ) {
                     automationEnabled = it
@@ -249,32 +252,48 @@ fun ShiroikumaUiPage(onBack: () -> Unit) {
                 }
             }
             item {
-                val clipboard = LocalClipboardManager.current
-                RowScaffold(1, prefs, onClick = {
-                    clipboard.setText(AnnotatedString(automationToken))
-                    scope.launch { snackbarHostState.showSnackbar("Automation token copied") }
-                }) {
-                    Column(Modifier.weight(1f)) {
-                        Text("Automation token (tap to copy)", style = MaterialTheme.typography.bodyLarge)
+                SwitchRow(
+                    level = 1,
+                    prefs = prefs,
+                    label = "Use authorization token?",
+                    description = "Off: any sister app may drive the automation. On: a caller must also present the token below. Either way the data door checks the caller's package, uid and signing certificate.",
+                    checked = automationRequireToken,
+                ) {
+                    automationRequireToken = it
+                    AutomationAuth.setRequireToken(context, it)
+                }
+            }
+            // Shown ONLY while a token is being asked for: a 48-character secret sitting under an
+            // off switch invites pasting it somewhere it would do nothing.
+            if (automationRequireToken) {
+                item {
+                    val clipboard = LocalClipboardManager.current
+                    RowScaffold(1, prefs, onClick = {
+                        clipboard.setText(AnnotatedString(automationToken))
+                        scope.launch { snackbarHostState.showSnackbar("Automation token copied") }
+                    }) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Automation token (tap to copy)", style = MaterialTheme.typography.bodyLarge)
+                            Text(
+                                "${automationToken.take(8)}…${automationToken.takeLast(8)}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
                         Text(
-                            "${automationToken.take(8)}…${automationToken.takeLast(8)}",
+                            "Regenerate",
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
+                            color = WarnColor,
+                            modifier = Modifier.clickable {
+                                automationToken = AutomationAuth.regenerateToken(context)
+                                scope.launch {
+                                    snackbarHostState.showSnackbar("Token regenerated — update pasted copies")
+                                }
+                            },
                         )
                     }
-                    Text(
-                        "Regenerate",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = WarnColor,
-                        modifier = Modifier.clickable {
-                            automationToken = AutomationAuth.regenerateToken(context)
-                            scope.launch {
-                                snackbarHostState.showSnackbar("Token regenerated — update pasted copies")
-                            }
-                        },
-                    )
                 }
             }
 

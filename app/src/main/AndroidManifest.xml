@@ -16,12 +16,23 @@
         tools:ignore="ScopedStorage" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <!-- shiroikuma fork: the automation data door's export/import service (contract v2 §4). -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
-    
+
     <uses-feature
         android:name="android.hardware.usb.host"
         android:required="false" />
+
+    <!--
+      shiroikuma fork: without this, setPackage() on our reply/progress broadcasts fails SILENTLY
+      on Android 11+ — the export runs, writes correctly, and is never heard of.
+    -->
+    <queries>
+        <package android:name="shiroikuma.oyokanri" />
+        <package android:name="shiroikuma.jiyusagyoban" />
+    </queries>
 
     <application
         android:name=".App"
@@ -308,9 +319,12 @@
             android:grantUriPermissions="true" />
 
         <!--
-          shiroikuma fork: the 保存復元 state-export automation contract. Exported on purpose and
-          with NO android:permission — the caller (自由作業盤) cannot hold one, so the shared token
-          in AutomationAuth is the gate, and the master switch defaults to OFF.
+          shiroikuma fork: the 保存復元 state-export automation contract (v2), §1's broadcast half.
+          Exported on purpose and with NO android:permission — this is the UNAUTHENTICATED half of
+          the surface, and deliberately so: it only ever writes where it was told to and reports
+          what it did. The master switch ships ON and the token is opt-in, so a freshly wiped phone
+          answers the batch with nothing configured. Everything that moves data through a
+          caller-supplied descriptor lives behind the provider below, which knows who is calling.
         -->
         <receiver
             android:name=".shiroikuma.StateExportReceiver"
@@ -321,5 +335,37 @@
                 <action android:name="shiroikuma.mpvkakucho.action.CANCEL_EXPORT" />
             </intent-filter>
         </receiver>
+
+        <!--
+          shiroikuma fork: the automation DATA DOOR (contract v2 §2a) — how 応用管理 backs this app
+          up *with its data* and puts it back on a wiped phone. Exported with no android:permission
+          because a custom one would have to be "normal" (any app may hold it) or "signature"
+          (impossible — every app in this family has its own keystore). The caller is identified
+          instead: exact package name, uid cross-check, and a pinned signing certificate, all in
+          AutomationCallers.
+        -->
+        <provider
+            android:name=".shiroikuma.AutomationProvider"
+            android:authorities="${applicationId}.automation"
+            android:exported="true" />
+
+        <service
+            android:name=".shiroikuma.AutomationDataService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Automation data export/import" />
+        </service>
+
+        <!--
+          Capability discovery, read WITHOUT waking this app — 白い熊 freezes apps aggressively, and
+          a frozen app cannot be asked anything, so 応用管理 reads these across every installed
+          package with MATCH_UNINSTALLED_PACKAGES | MATCH_DISABLED_COMPONENTS. An app without them
+          is simply not offered for data backup or restore.
+        -->
+        <meta-data android:name="shiroikuma.automation.contract" android:value="2" />
+        <meta-data android:name="shiroikuma.automation.format" android:value="1" />
+        <meta-data android:name="shiroikuma.automation.min_format" android:value="1" />
     </application>
 </manifest>
