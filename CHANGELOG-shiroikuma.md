@@ -3,6 +3,95 @@
 Changes this fork makes on top of stock [mpvEx](https://github.com/marlboro-advance/mpvEx).
 Upstream's own release notes are not duplicated here.
 
+## 1.2.9+8 — 2026-09-04
+
+Base: upstream mpvEx `1.2.9` (versionCode 129) — unchanged.
+
+### 保存復元 automation contract v2 — an open door, and app data that survives a clean phone
+
+**The token becomes opt-in.**
+
+- `automation_enabled` now defaults to **ON** and a new `automation_require_token` defaults to
+  **OFF**, so a freshly installed app answers the 保存復元 batch with nothing configured and nothing
+  pasted. That is the point of the change: a pasted secret cannot survive a wipe, and the case this
+  now serves is 応用管理 restoring apps *and their data* onto a clean phone. The master switch stays,
+  because it is the only way to close this app off.
+- **A token sent to an app that does not require one is ignored, never refused.** Tokens outlive the
+  setting they were pasted for; refusing one would turn "白い熊 turned a switch off" into "half the
+  batch mysteriously fails".
+- Both checks now live in **one function**, `AutomationAuth.refuse()`, which every door calls and
+  none re-derives. "automation disabled" and "bad token" stay distinct errors.
+- The settings page gains 「Use authorization token?」 below the master switch, and **the token row is
+  shown only while that is on** — a 48-character secret sitting under an off switch invites pasting
+  it somewhere it would do nothing. All three rows stay inside the Export/Import section.
+
+**A data door: a provider, a verified caller, and a file descriptor.**
+
+- New `ContentProvider` at `shiroikuma.mpvkakucho.automation`, exported with no permission, exposing
+  `describe` / `export` / `import` / `cancel`. It answers the same `OK:` / `ERROR:` grammar as the
+  broadcast contract, and **returns refusals rather than throwing** — an exception across a binder
+  reaches the caller as a stack trace that tells 白い熊 nothing.
+- **The caller is identified three ways**: an exact package name (never a prefix — any sideloaded app
+  may call itself `shiroikuma.evil`), a uid cross-check against the kernel's answer, and a **pinned
+  signing certificate**. Both pins were re-derived from the signed APKs on this machine rather than
+  copied on trust.
+- **The payload moves through a caller-supplied `ParcelFileDescriptor`** — not a path, not a URI. A
+  backup directory is renamed out from under you on commit, encryption and checksums are per known
+  file, and a descriptor is a capability that expires when it is closed. The descriptor is `dup()`ed
+  before it leaves the provider call and closed in a `finally`.
+- The work runs in a **foreground service**, never in the binder call: a multi-minute synchronous
+  call would freeze the caller's UI, report no progress and refuse cancellation.
+- **`import` exists only here.** It never gets a broadcast action — the broadcast receiver is
+  exported with no permission, so an import there would let any app on the phone wipe every watch
+  position and playlist in this one.
+- `describe` answers a header **outside** the archive (app id, version, format, `min_format_readable`,
+  `requires_launch_first`, `contains`), because 応用管理 must draw a row before an export exists and
+  judge compatibility before streaming.
+- **`contains` says what a player's data actually is.** Watch positions, playlists, settings, network
+  connections — and a closing line stating that video files are **not** included. A playlist entry is
+  a path, not a copy; without that line 応用管理 would size this backup against a media library it is
+  never going to be handed.
+- The import now commits its preferences **synchronously**. 応用管理 force-stops the app the instant
+  an import replies success — deliberately, since a live process writes its cached preferences back
+  out at shutdown and would silently undo the restore — and an `apply()` still in flight would be
+  lost with it.
+- Manifest: the provider, the service, the three `shiroikuma.automation.*` `<meta-data>` capability
+  entries (readable without waking a frozen app), and a **`<queries>` block naming both caller
+  packages** — 応用管理 *and* 自由作業盤. This app had no `<queries>` element at all: without one,
+  `setPackage()` on our reply broadcasts fails *silently* on Android 11+, and worse, `getPackageInfo`
+  and `getPackagesForUid` are visibility-filtered too, so an invisible caller would have failed the
+  identity check as "signature unreadable" rather than merely losing its reply.
+
+**The failure paths that only show up under load.**
+
+- **Progress binds the data door as well.** A caller treats every progress broadcast as proof the app
+  is alive and fails a slot that goes quiet for two minutes, so the service sends §3-shaped progress
+  with the `job_id` as correlation id — under both `job_id` and `reply_id`, so a caller that already
+  parses §1's progress needs no second code path.
+- **The descriptor is closed on every path that can fail.** A provider call is a background start and
+  API 31+ may refuse it: if `startForegroundService` throws, the duplicate is closed and the job
+  dropped before the refusal is answered; if `startForeground` throws service-side, the descriptor
+  taken out of the handover map is closed there. A leaked descriptor holds the caller's file open,
+  and a caller cannot checksum or encrypt a file that is still open.
+- **A restore is spooled to disk, never into a byte array.** The archive arrives on a descriptor
+  whose size this app does not choose; reading an arbitrarily large one into memory is how a restore
+  dies of `OutOfMemory` on the phone it was meant to rescue.
+- **`startForeground` happens before any early return, so a stale job id cannot crash the app.**
+  Once `startForegroundService` has been called the platform requires the promise kept whatever the
+  service then decides, and enforces it with `ForegroundServiceDidNotStartInTimeException` — so a
+  caller retrying with an id whose descriptor is already taken has to be *ignored*, not answered
+  with a crash. (This is what makes the intermediate `+7` build unsafe.)
+- **One `handedOff` flag guards the descriptor, not one check per failure.** The window between
+  taking the descriptor out of the handover map and the coroutine owning it has more than one exit,
+  and every one of them leaks the caller's file handle identically.
+- **`describe` is kept off the DI graph** — the package manager and a plain enum, never Koin. A
+  provider's `onCreate` runs before `Application.onCreate`, so a `call()` can land while DI is still
+  starting; that is precisely the clean-phone case, where the provider call is what starts the
+  process at all.
+- The reply lambda and the byte counter avoid a shape (a local function beside an anonymous object
+  capturing a local `var`) that has been seen to crash AGP's lint analysis *after* Kotlin compiles
+  cleanly — a whole wasted build to discover, and free to avoid.
+
 ## 1.2.9+5 — 2026-07-31
 
 Base: upstream mpvEx `1.2.9` (versionCode 129) — unchanged; upstream has had no commits since March.

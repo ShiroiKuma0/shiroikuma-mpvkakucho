@@ -8,11 +8,12 @@
 
 A fork of [mpvEx](https://github.com/marlboro-advance/mpvEx) with **major additions**: a full
 black-yellow UI customization page, portrait laid out exactly like landscape, one-ZIP
-export/import of everything settable, headless backup automation, and restored chapter markers.
+export/import of everything settable, headless backup automation that survives a wiped phone, and
+restored chapter markers.
 
 Installs **side-by-side** with mpvEx (app id `shiroikuma.mpvkakucho`).
 
-**📥 Latest release: [`1.2.9+5`](https://github.com/ShiroiKuma0/shiroikuma-mpvkakucho/releases/latest)** — [all releases & APK downloads »](https://github.com/ShiroiKuma0/shiroikuma-mpvkakucho/releases)
+**📥 Latest release: [`1.2.9+8`](https://github.com/ShiroiKuma0/shiroikuma-mpvkakucho/releases/latest)** — [all releases & APK downloads »](https://github.com/ShiroiKuma0/shiroikuma-mpvkakucho/releases)
 
 </div>
 
@@ -68,13 +69,33 @@ Pick an export directory once and the page tells you when you last backed up.
 
 ## 🤖 Headless backup automation
 
-The app answers a token-gated `EXPORT_STATE` broadcast, so a sister-app task can back it up with no
-UI at all — reporting real progress counts and replying with the written path and size. It also
-enumerates its own categories on request, stating which of them start ticked, so the caller's picker
-is told the answer rather than guessing it. A running export can be **cancelled** from outside: it
-unwinds at the next entry boundary and deletes its half-written file, leaving the backup directory
-exactly as it found it. The master switch is **off** until you turn it on, and the token never
-travels inside a backup.
+The app answers an `EXPORT_STATE` broadcast, so a sister-app task can back it up with no UI at all —
+reporting real progress counts and replying with the written path and size. It also enumerates its
+own categories on request, stating which of them start ticked, so the caller's picker is told the
+answer rather than guessing it. A running export can be **cancelled** from outside: it unwinds at
+the next entry boundary and deletes its half-written file, leaving the backup directory exactly as
+it found it.
+
+Automation is **on out of the box**, and an authorization token is opt-in — a pasted secret cannot
+survive a wipe, and the point is to work on a phone where nothing has been configured yet. Turn
+「Use authorization token?」 on and a caller must present the token as well; leave it off and any
+sister app may drive the export. A token sent to the app when it is not asking for one is quietly
+ignored rather than refused. The token itself never travels inside a backup.
+
+---
+
+## 💾 Backup that survives a clean phone
+
+A second, authenticated door lets a backup manager save this app **with its data** and put it back
+on a wiped phone — the thing that normally needs root. It identifies the caller three ways (exact
+package name, uid, and a pinned signing certificate) and moves the archive through a file descriptor
+the caller opens, so the backup lands inside that manager's encrypted, checksummed archive rather
+than beside it. Restore exists only on this door, never as a broadcast, so no other app on the phone
+can overwrite your watch positions.
+
+What travels is the app's **state** — the UI theme, settings, playlists, watch positions and network
+connections, a few hundred kilobytes of it. **Video files are never included**: a playlist entry is
+a path, not a copy.
 
 ---
 
