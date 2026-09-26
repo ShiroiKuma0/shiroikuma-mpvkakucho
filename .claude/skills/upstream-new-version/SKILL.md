@@ -82,7 +82,7 @@ translation commits into a single "translations" row), with these columns:
 | **Commit** | short SHA |
 | **Area** | subsystem — player/mpv core, decoder & hardware accel, subtitles, audio tracks, file browser, network protocols (SMB/FTP/WebDAV/HTTP), gestures & controls, PiP/background play, playlist & history, settings UI, theming, update feature, build |
 | **What it changes** | a plain-language sentence drawn from the commit *body*, not just the subject — what is actually new or fixed, described so 白い熊 can judge it without reading the diff |
-| **Relevance to this fork** | **High / Medium / Low, and why** — does it touch a file in our customization layer (identity, versioning, signing, icon, de-branding strings, the updater's repo URL), the bundled `mpv-android-lib` AAR, or a feature 白い熊 actually uses? Flag anything likely to **conflict on rebase** and anything that is a **genuinely useful fix** |
+| **Relevance to this fork** | **High / Medium / Low, and why** — does it touch a file in our customization layer (identity, versioning, signing, icon, de-branding strings, the updater's repo URL), the `mpv-android` native-core version in `gradle/libs.versions.toml`, or a feature 白い熊 actually uses? Flag anything likely to **conflict on rebase** and anything that is a **genuinely useful fix** |
 
 Then add a short **"New features"** section in prose for anything user-visible that the table's
 one-liners undersell (a new screen, a new gesture, a new protocol backend, a new decoder option),

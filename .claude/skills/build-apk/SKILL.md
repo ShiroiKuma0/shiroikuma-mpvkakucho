@@ -29,9 +29,10 @@ export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
 export ANDROID_HOME=/home/shiroikuma/android-sdk
 ```
 
-The mpv/FFmpeg native stack is **not** built locally — it ships as the checked-in prebuilt
-`app/libs/mpv-android-lib-v0.0.1.aar` (~78 MB), so the build needs **no NDK toolchain work**.
-Gradle 9.4.1 + AGP 9.1, JVM target 17, `compileSdk`/`targetSdk` 36, `minSdk` 26.
+The mpv/FFmpeg native stack is **not** built locally — it comes prebuilt from Maven Central as
+`io.github.marlboro-advance:mpv-android`, so the build needs **no NDK toolchain work** (but the first
+build after a version bump needs network to fetch it).
+Gradle 9.6.0 + AGP 9.4, JVM target 17, `compileSdk` 37, `targetSdk` 36, `minSdk` 26.
 
 ## Steps
 

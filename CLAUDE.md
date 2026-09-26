@@ -8,7 +8,7 @@ Jetpack-Compose video player built on mpv-android (itself forked from mpvKt). Pa
 
 - `origin` = `git@github.com:ShiroiKuma0/shiroikuma-mpvkakucho.git` (ssh) — our fork.
 - `upstream` = `https://github.com/marlboro-advance/mpvEx.git` (https, fetch only).
-- **`master`** mirrors `upstream/master` (currently the `1.2.9` line). Fast-forward only — no fork
+- **`master`** mirrors `upstream/master` (currently the `1.3.1` line). Fast-forward only — no fork
   work ever lives here.
 - **`custom`** carries all our work, rebased onto `master` on each upstream sync. **All development
   happens on `custom`**, and it is the GitHub default branch.
@@ -36,10 +36,13 @@ Jetpack-Compose video player built on mpv-android (itself forked from mpvKt). Pa
 - **Build:** `./gradlew buildApk` (release, signed; copies the APK to `~/tmp` and bumps
   `BUILD_NUMBER`). Fast dev iteration: `./gradlew :app:assembleStandardDebug` (no R8; the debug
   variant has `applicationIdSuffix = ".debug"` so it installs alongside the release build).
-- **Native stack:** mpv + FFmpeg ship as the checked-in prebuilt
-  `app/libs/mpv-android-lib-v0.0.1.aar` (~78 MB) — **no NDK toolchain work**, no submodules.
-- **Toolchain:** Gradle 9.4.1, AGP 9.1, Kotlin 2.3.20, JVM target 17, compileSdk/targetSdk 36,
-  minSdk 26. Room + KSP, Koin DI, Compose Navigation3.
+- **Native stack:** mpv + FFmpeg come prebuilt as upstream's Maven Central artefact
+  `io.github.marlboro-advance:mpv-android` (`1.0.0` since upstream 1.3.1; version in
+  `gradle/libs.versions.toml` → `mpv-android`) — **no NDK toolchain work**, no submodules. Upstream
+  1.3.1 deleted the old checked-in `app/libs/mpv-android-lib-v0.0.1.aar`; the first build after a
+  bump needs network to fetch it.
+- **Toolchain:** Gradle 9.6.0, AGP 9.4, Kotlin 2.3.20, JVM target 17, compileSdk 37, targetSdk 36,
+  minSdk 26 (android-37 platforms are installed in `~/android-sdk`). Room + KSP, Koin DI, Compose Navigation3.
 - **Versioning:** upstream's `versionCode`/`versionName` literals in `app/build.gradle.kts` are left
   **byte-identical to upstream** and read back by the fork block further down, so an upstream bump
   flows through with no hand-editing and no conflict on those lines. `BUILD_NUMBER`
@@ -241,9 +244,11 @@ preference upstream (`PlayerOrientation`), so nothing there needed unlocking.
 
 ## Current status
 
-**Phase 0 — repo bootstrap (2026-07-26).** Fork created from `marlboro-advance/mpvEx`;
-`master` mirrors upstream, `custom` created with the identity layer: app id `shiroikuma.mpvkakucho`,
-label `白い熊 mpv拡張`, fork versioning (`+N` / `×10000`), single-ABI arm64 build with upstream's ABI
-splits and per-ABI versionCode block removed, house APK naming, own keystore + gitignored
-`keystore.properties`, and the three skills above. Icon and full de-branding follow next, then the
-first build.
+**On upstream 1.3.1 (2026-09-26).** Released builds: `1.2.9+4`, `1.2.9+5`, `1.2.9+8` (unpadded, from
+before the padding rule), then `1.3.1+001` — the rebase onto upstream 1.3.1 and the first
+zero-padded tag. The whole fork layer described above is in place: identity, versioning, signing,
+single-ABI build, black-yellow icon and theme, de-branding, portrait parity, the 白い熊 mpv拡張 UI
+page with one-ZIP export/import, and automation contract v2 with the data door.
+
+Upstream 1.3.1 changed the local watch-position key to file name + full-path hash, so positions
+saved before `1.3.1+001` — including those in older export ZIPs — no longer match.
