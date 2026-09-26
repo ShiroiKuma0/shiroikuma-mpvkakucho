@@ -3,6 +3,49 @@
 Changes this fork makes on top of stock [mpvEx](https://github.com/marlboro-advance/mpvEx).
 Upstream's own release notes are not duplicated here.
 
+## 1.3.1+001 — 2026-09-26
+
+Base: upstream mpvEx `1.3.1` (versionCode 131), up from `1.2.9`. The fork layer is carried over
+unchanged; this release is mainly the rebase, plus one versioning change.
+
+### Versioning
+
+- **The build counter is zero-padded to three digits** in the version name — `1.3.1+001`, not
+  `1.3.1+1` — and therefore in the APK filename and the release tag, so builds sort in build order
+  everywhere they are listed. `BUILD_NUMBER` stays a plain integer and the `versionCode` stays
+  arithmetic (`1310001`). The in-app updater parses the counter numerically, so `1.3.1+001`
+  compares correctly against the unpadded tags published before it (`1.2.9+8` and earlier), which
+  keep their names.
+
+### Rebase onto upstream 1.3.1 — what changes under the fork
+
+- **New native core.** mpv-android moves from the bundled `0.0.1` AAR to upstream's `1.0.0` from
+  Maven Central: subtitle font fallback to the system Roboto / Noto fonts, and a fix for the player
+  Activity leaking on rotation and close.
+- **Resume positions reset once.** Upstream now keys a local file's watch position by file name
+  *plus* a hash of its full path, fixing same-named files in different folders sharing one
+  position. Positions saved by earlier builds use the old key and are no longer found, and the same
+  applies to playback history in export ZIPs made before this release.
+- **External subtitles are no longer deleted from disk** when removed from the track list — they are
+  only unloaded.
+- Deleting a video now also purges its history, watch position, cached metadata and playlist entries;
+  a missing file is skipped with a toast instead of breaking playback.
+- The secondary subtitle drops to the bottom position when the primary is turned off; picking a
+  chapter no longer scrolls the chapter sheet back to the top.
+- Faster browsing: a single-pass media scan, a filesystem-stat JSON cache of the video list, and
+  thumbnail work moved off the main thread.
+- The Open source libraries screen (About) now actually lists the libraries.
+- Upstream removed its online subtitle search (the Wyzie service is discontinued).
+- Toolchain: Gradle 9.6.0, compileSdk 37.
+
+### Fork layer re-checked after the rebase
+
+- The playlist sheet's list/grid toggle had to be re-ported: upstream's version still showed it in
+  landscape only. It stays available in **both** orientations (now with upstream's auto-mirrored
+  list icon).
+- Identity, signing, the single arm64 build without per-ABI version codes, the updater's target and
+  version parser, the black-yellow defaults and every portrait-parity item were verified intact.
+
 ## 1.2.9+8 — 2026-09-04
 
 Base: upstream mpvEx `1.2.9` (versionCode 129) — unchanged.

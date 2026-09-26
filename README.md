@@ -13,7 +13,7 @@ restored chapter markers.
 
 Installs **side-by-side** with mpvEx (app id `shiroikuma.mpvkakucho`).
 
-**📥 Latest release: [`1.2.9+8`](https://github.com/ShiroiKuma0/shiroikuma-mpvkakucho/releases/latest)** — [all releases & APK downloads »](https://github.com/ShiroiKuma0/shiroikuma-mpvkakucho/releases)
+**📥 Latest release: [`1.3.1+001`](https://github.com/ShiroiKuma0/shiroikuma-mpvkakucho/releases/latest)** — [all releases & APK downloads »](https://github.com/ShiroiKuma0/shiroikuma-mpvkakucho/releases)
 
 </div>
 
@@ -134,4 +134,6 @@ export ANDROID_HOME="$HOME/android-sdk"
 
 Release signing reads a gitignored `keystore.properties` at the repo root
 (`keystore.properties_sample` documents the keys); without it the release APK simply comes out
-unsigned. Single-ABI **arm64-v8a**; `versionCode` is `<upstream> * 10000 + <build>`.
+unsigned. Single-ABI **arm64-v8a**; `versionCode` is `<upstream> * 10000 + <build>`, and the build
+counter is zero-padded to three digits in the version name (`1.3.1+001`). The mpv/FFmpeg core is
+upstream's `io.github.marlboro-advance:mpv-android` from Maven Central — no NDK toolchain needed.
