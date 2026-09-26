@@ -92,11 +92,17 @@ android {
 
   // shiroikuma fork versioning. Upstream's versionCode/versionName literals above are left exactly
   // as upstream writes them and read back here, so an upstream bump flows through untouched:
-  //   versionName = "<upstream>+<BUILD_NUMBER>"
+  //   versionName = "<upstream>+<BUILD_NUMBER zero-padded to 3>"
   //   versionCode = <upstream> * 10000 + <BUILD_NUMBER>
+  //
+  // The counter is zero-padded to three digits in the versionName (and therefore in the APK
+  // filename and the release tag that copies it) so that builds sort in build order everywhere they
+  // are listed — `~/tmp`, `/sdcard/tmp`, and the releases page — instead of putting +10 before +9.
+  // The padding is presentational only: BUILD_NUMBER stays a plain int in gradle.properties, and
+  // the versionCode stays arithmetic, so nothing that has to be a number ever sees a leading zero.
   val upstreamVersionCode = defaultConfig.versionCode!!
   val upstreamVersionName = defaultConfig.versionName!!
-  val forkVersionName = "$upstreamVersionName+$shiroikumaBuild"
+  val forkVersionName = "$upstreamVersionName+${shiroikumaBuild.toString().padStart(3, '0')}"
   val forkVersionCode = upstreamVersionCode * 10000 + shiroikumaBuild
   defaultConfig.versionCode = forkVersionCode
   defaultConfig.versionName = forkVersionName

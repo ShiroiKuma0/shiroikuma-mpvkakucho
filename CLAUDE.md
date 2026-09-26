@@ -44,8 +44,15 @@ Jetpack-Compose video player built on mpv-android (itself forked from mpvKt). Pa
   **byte-identical to upstream** and read back by the fork block further down, so an upstream bump
   flows through with no hand-editing and no conflict on those lines. `BUILD_NUMBER`
   (`gradle.properties`) is our increment — bumped every build, reset to 1 on each new upstream
-  version. Fork `versionName = "<upstream>+<BUILD_NUMBER>"`,
+  version. Fork `versionName = "<upstream>+<BUILD_NUMBER zero-padded to 3>"`,
   `versionCode = <upstream versionCode> * 10000 + BUILD_NUMBER` (129 → `1290001`).
+  **The counter is zero-padded to three digits in the `versionName`** (`1.2.9+009`), and therefore
+  in the APK filename and in the release tag that copies it, so builds sort in build order in every
+  listing instead of putting `+10` before `+9`. The padding is **presentational only**:
+  `BUILD_NUMBER` stays a plain int in `gradle.properties` and the `versionCode` stays arithmetic, so
+  nothing that must be a number ever sees a leading zero. Releases published before this rule
+  (`1.2.9+4`, `1.2.9+5`, `1.2.9+8`) keep their unpadded tags — **never retag what is published**;
+  padding simply starts from the current build.
 - **Single-ABI arm64-v8a.** Upstream enables ABI **splits** (4 ABIs + universal APK) plus an
   `androidComponents` block that multiplies each output's versionCode by 10 and adds a per-ABI
   digit. The fork **disables splits and deletes that block**, so exactly one APK is produced and the
@@ -100,10 +107,15 @@ Jetpack-Compose video player built on mpv-android (itself forked from mpvKt). Pa
 The in-app updater (`standard` flavor, `ENABLE_UPDATE_FEATURE=true`) points at **our** releases, not
 upstream's. That is deliberate: upstream builds are signed with a different key and could never
 install over ours, so offering them as "updates" would be both broken and wrong branding. The
-`publish-version` skill's tag format (`<upstream>+<N>`, no `v` prefix) is what the updater compares
+`publish-version` skill's tag format (`<upstream>+<NNN>`, no `v` prefix) is what the updater compares
 against, so the two must stay in step. `UpdateFeature.isNewerVersion` was also **fixed** to parse
 that `+N` tail — upstream split on `.` alone, so `"1.2.9+1"` yielded `"9+1"` → `0` and every fork
 build compared equal to every other.
+
+**Zero-padding is safe for the updater, and this is why:** `isNewerVersion` parses the tail with
+`toIntOrNull()`, so `"009"` becomes `9` and a padded tag compares correctly against the unpadded
+ones already published (`1.2.9+009` > `1.2.9+8`). What would break it is a *string* comparison of
+that tail, so if this parser is ever rewritten, keep it numeric.
 
 ## The black-yellow theme (a standing fork requirement)
 
